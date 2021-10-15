@@ -124,6 +124,7 @@ for scene_id in range(len(scene_list)):
 		o3d.visualization.draw_geometries([pcd])
 		'''
 
+		# filter out 3d points out of the range of the environment
 		mask_X = np.logical_and(xyz_points[0, :] > min_X, xyz_points[0, :] < max_X) 
 		mask_Y = np.logical_and(xyz_points[1, :] > 0.0, xyz_points[1, :] < max_height)
 		mask_Z = np.logical_and(xyz_points[2, :] > min_Z, xyz_points[2, :] < max_Z)  
@@ -131,19 +132,20 @@ for scene_id in range(len(scene_list)):
 		xyz_points = xyz_points[:, mask_XYZ]
 		sseg_points = sseg_points[mask_XYZ]
 
+		# discretize 3d points into 3d coordinates
+		# assign 3d points to voxels
 		x_coord = np.floor((xyz_points[0, :] - min_X) / cell_size).astype(int)
 		y_coord = np.floor(xyz_points[1, :] / cell_size).astype(int)
 		z_coord = np.floor((xyz_points[2, :] - min_Z) / cell_size).astype(int)
-		#'''
+		
+		# filter out points with too large height (y value)
 		mask_y_coord = y_coord < int(max_height/cell_size)
 		x_coord = x_coord[mask_y_coord]
 		y_coord = y_coord[mask_y_coord]
 		z_coord = z_coord[mask_y_coord]
 		
 		sseg_points = sseg_points[mask_y_coord]
-		#'''
 		four_dim_grid[z_coord, y_coord, x_coord, sseg_points] += 1
-		#assert 1==2
 
 		# sum over the height axis
 		grid_sum_height = np.sum(four_dim_grid, axis=1)
