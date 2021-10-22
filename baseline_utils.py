@@ -186,3 +186,54 @@ def apply_color_to_pointCloud (sseg_points, num_classes=41):
   for i in range(num_classes):
     color_sseg_points[sseg_points==i] = d3_41_colors_rgb[i]
   return color_sseg_points
+
+def create_folder (folder_name, clean_up=False):
+  flag_exist = os.path.isdir(folder_name)
+  if not flag_exist:
+    print('{} folder does not exist, so create one.'.format(folder_name))
+    os.makedirs(folder_name)
+    #os.makedirs(os.path.join(test_case_folder, 'observations'))
+  else:
+    print('{} folder already exists, so do nothing.'.format(folder_name))
+    if clean_up:
+      os.system('rm {}/*.png'.format(folder_name))
+      os.system('rm {}/*.npy'.format(folder_name))
+      os.system('rm {}/*.jpg'.format(folder_name))
+
+def read_map_npy(map_npy):
+  min_x = map_npy['min_x']
+  max_x = map_npy['max_x']
+  min_z = map_npy['min_z']
+  max_z = map_npy['max_z']
+  min_X = map_npy['min_X']
+  max_X = map_npy['max_X']
+  min_Z = map_npy['min_Z']
+  max_Z = map_npy['max_Z']
+  semantic_map = map_npy['semantic_map']
+  return semantic_map, (min_X, min_Z, max_X, max_Z), (min_x, min_z, max_x, max_z)
+
+def semanticMap_to_binary(sem_map):
+  sem_map.astype('uint8')
+  sem_map[sem_map != 2] = 0
+  sem_map[sem_map == 2] = 255
+  return sem_map
+
+def get_class_mapper():
+  class_dict = {}
+  categories = ['void', 'wall', 'floor','chair','door','table','picture','cabinet','cushion','window','sofa','bed', \
+    'curtain','chest_of_drawers','plant','sink','stairs','ceiling','toilet','stool','towel','mirror','tv_monitor', \
+    'shower','column','bathtub','counter','fireplace','lighting','beam','railing','shelving','blinds','gym_equipment', \
+    'seating','board_panel','furniture','appliances','clothes','objects','misc']
+  class_dict = {v: k for k, v in enumerate(categories)}
+  return class_dict
+
+def pxl_coords_to_pose(coords, pose_range, coords_range, cell_size=0.1):
+  x, y = coords
+  #min_X, min_Z, max_X, max_Z = pose_range
+  #min_x, min_z, max_x, max_z = coords_range
+
+  #X = (x + min_x) * cell_size + min_X
+  #Z = (y + min_z) * cell_size + min_Z
+  X = x * cell_size
+  Z = y * cell_size
+  return (X, Z)
