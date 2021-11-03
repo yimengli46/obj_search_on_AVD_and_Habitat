@@ -5,6 +5,8 @@ import cv2
 from baseline_utils import apply_color_to_map, get_class_mapper, read_map_npy, create_folder, pxl_coords_to_pose
 import skimage.measure
 from math import floor, sqrt
+import csv
+import math
 
 #scene_id = 3
 dataset_dir = '/home/yimeng/Datasets/MP3D'
@@ -16,7 +18,7 @@ scene_list += ['V2XKFyX4ASd_1', 'V2XKFyX4ASd_2', 'TbHJrupSAjP_0', 'TbHJrupSAjP_1
 scene_list += ['WYY7iVyf5p8_0', 'WYY7iVyf5p8_1', 'YFuZgdQ5vWj_0']
 
 IGNORED_CLASS = ['void', 'wall', 'floor', 'railing', 'blinds']
-thresh_dist = 5.
+thresh_dist = math.inf
 
 semantic_map_output_folder = f'output/semantic_map'
 create_folder(semantic_map_output_folder, clean_up=False)
@@ -64,15 +66,39 @@ for scene_id in range(len(scene_list)):
 				dist = sqrt((a_center_pose[0] - b_center_pose[0])**2 + (a_center_pose[1] - b_center_pose[1])**2)
 				if dist < thresh_dist:
 					obj_obj_dict[a_cat][b_cat].append(dist)
+					obj_obj_dict[b_cat][a_cat].append(dist)
 
 
+#=============================== visualize the correlation on a matrix =========================================
+'''
 saved_folder = f'output/obj_obj_proximity'
 create_folder(saved_folder, clean_up=True)
 
-for k1 in list(obj_obj_dict.keys()):
-	for k2 in list(obj_obj_dict[k1].keys()):
+solution_rows = []
+num_classes = len(list(obj_obj_dict.keys()))
+corr_mat_mu = np.zeros((num_classes, num_classes))
+corr_mat_std = np.zeros((num_classes, num_classes))
+corr_mat_samples = np.zeros((num_classes, num_classes))
+for i, k1 in enumerate(list(obj_obj_dict.keys())):
+	for j, k2 in enumerate(list(obj_obj_dict[k1].keys())):
 		arr_dist = obj_obj_dict[k1][k2]
-		#print(arr_dist)
+
+		# compute mean, variance and num_samples for each pair
+		arr_dist = np.array(arr_dist)
+		mu = np.mean(arr_dist)
+		std = np.std(arr_dist)
+		num_samples = len(arr_dist)
+		print(f'{k1}_{k2}, mu = {mu}, std = {std}, samples = {num_samples}')
+
+		solution_rows.append(tuple([k1, k2, mu, std, num_samples]))
+
+		if num_samples > 0:
+			corr_mat_mu[i, j] = mu
+			corr_mat_std[i, j] = std 
+			corr_mat_samples[i, j] = sqrt(num_samples)
+
+		
+		# write histograms
 		if len(arr_dist) > 5:
 			n, bins, patches = plt.hist(arr_dist, 50, density=False, facecolor='g', alpha=0.75)
 
@@ -86,3 +112,42 @@ for k1 in list(obj_obj_dict.keys()):
 			#plt.show()
 			plt.savefig(f'{saved_folder}/dis_{k1}_{k2}.jpg')
 			plt.close()
+		
+
+# write to csv
+with open('experiment_21_scenes.csv', 'w') as f:
+	writer = csv.writer(f)
+	writer.writerows(solution_rows)	
+
+# write correlation matrix image
+ticks = []
+for i in range(num_classes):
+	ticks.append(1*i + 0.5)
+
+plt.figure()
+plt.title('mu between 21 scenes')
+plt.imshow(corr_mat_mu)
+plt.yticks(ticks, list(obj_obj_dict.keys()))
+plt.xticks(ticks, list(obj_obj_dict.keys()), rotation='vertical')
+plt.colorbar()
+plt.tight_layout()
+plt.show()
+
+plt.figure()
+plt.title('std between 21 scenes')
+plt.imshow(corr_mat_std)
+plt.yticks(ticks, list(obj_obj_dict.keys()))
+plt.xticks(ticks, list(obj_obj_dict.keys()), rotation='vertical')
+plt.colorbar()
+plt.tight_layout()
+plt.show()
+
+plt.figure()
+plt.title('sqrt num_examples between 21 scenes')
+plt.imshow(corr_mat_samples)
+plt.yticks(ticks, list(obj_obj_dict.keys()))
+plt.xticks(ticks, list(obj_obj_dict.keys()), rotation='vertical')
+plt.colorbar()
+plt.tight_layout()
+plt.show()
+'''
