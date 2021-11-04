@@ -8,9 +8,12 @@ from math import floor, sqrt
 import csv
 import math
 from sklearn.mixture import GaussianMixture
+import itertools
 
 #scene_id = 3
 dataset_dir = '/home/yimeng/Datasets/MP3D'
+GMM_param_save_folder = 'output/GMM_obj_obj_params'
+num_GMM_components = 3
 
 scene_list = ['2t7WUuJeko7_0']
 scene_list += ['7y3sRwLe3Va_1', '8WUmhLawc2A_0', '29hnd4uzFmX_0', 'cV4RVeZvu5T_0', 'cV4RVeZvu5T_1', 'e9zR4mvMWw7_0',]
@@ -66,20 +69,63 @@ for scene_id in range(len(scene_list)):
 				
 				x_diff = b_center_pose[0] - a_center_pose[0]
 				z_diff = b_center_pose[1] - a_center_pose[1]
-				obj_obj_dict[a_cat][b_cat].append((x_diff, z_diff))
-				obj_obj_dict[b_cat][a_cat].append((-x_diff, -z_diff))
+				obj_obj_dict[a_cat][b_cat].append((z_diff, x_diff))
+				obj_obj_dict[b_cat][a_cat].append((-z_diff, -x_diff))
 
+
+def visualize_GMM_dist(arr_dist, gm, k1, k2, h=400, w=400):
+	min_X = -w/2 * .1
+	max_X = w/2 * .1
+	min_Z = -h/2 * .1
+	max_Z = w/2 * .1
+	x_grid = np.arange(min_X, max_X, 0.1)
+	z_grid = np.arange(min_Z, max_Z, 0.1)
+	locs = np.array(list(itertools.product(z_grid.tolist(), x_grid.tolist())))
+	logprob = gm.score_samples(locs)
+	pdf = np.exp(logprob)
+	prob_dist = pdf.reshape((h, w))
+
+	mat_dist = np.zeros((h, w))
+	z_coords = np.floor((arr_dist[:, 0] - min_Z) / .1).astype(int)
+	x_coords = np.floor((arr_dist[:, 1] - min_X) / .1).astype(int)
+	mask_Z = arr_dist[:, 0] < max_Z 
+	mask_X = arr_dist[:, 1] < max_X
+	mask_XZ = np.logical_and.reduce((mask_X, mask_Z))
+	z_coords = z_coords[mask_XZ]
+	x_coords = x_coords[mask_XZ]
+	mat_dist[z_coords, x_coords] += 1.
+	
+	fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20,10))
+	ax[0].imshow(mat_dist)
+	ax[0].set_title(f'instance count between {k1} and {k2}')
+	ax[1].imshow(prob_dist)
+	ax[1].set_title(f'GMM between {k1} and {k2}')
+	#plt.show()
+	#'''
+	fig.tight_layout()
+	fig.savefig(f'{GMM_param_save_folder}/GMM_dist_{k1}_{k2}.jpg')
+	plt.close()
+	#'''
+	
 for i, k1 in enumerate(list(obj_obj_dict.keys())):
 	for j, k2 in enumerate(list(obj_obj_dict[k1].keys())):
 		arr_dist = np.array(obj_obj_dict[k1][k2])
-		gm = GaussianMixture(n_components=3).fit(arr_dist)
-		params = gm.get_params()
+		if len(arr_dist) > 5:
+			gm = GaussianMixture(n_components=num_GMM_components).fit(arr_dist)
+			params = gm.get_params()
+			np.save(f'{GMM_param_save_folder}/GMM_params_{k1}_{k2}.npy', params)
+
+			visualize_GMM_dist(arr_dist, gm, k1, k2)
+
+		
+
+
 		'''
 		logprob = gm.score_samples(np.array([[-14., 1.]]))
 		pdf = np.exp(logprob)
 		gm.set_params(**params)
 		'''
-		assert 1==2
+		#assert 1==2
 
 
 

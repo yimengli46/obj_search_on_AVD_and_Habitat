@@ -227,7 +227,7 @@ def get_class_mapper():
   class_dict = {v: k for k, v in enumerate(categories)}
   return class_dict
 
-def pxl_coords_to_pose(coords, pose_range, coords_range, cell_size=0.1):
+def pxl_coords_to_pose(coords, pose_range, coords_range, cell_size=0.01):
   x, y = coords
   #min_X, min_Z, max_X, max_Z = pose_range
   #min_x, min_z, max_x, max_z = coords_range
