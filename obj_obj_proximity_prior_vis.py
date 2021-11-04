@@ -69,8 +69,10 @@ for scene_id in range(len(scene_list)):
 					obj_obj_dict[b_cat][a_cat].append(dist)
 
 
+
+
 #=============================== visualize the correlation on a matrix =========================================
-'''
+#'''
 saved_folder = f'output/obj_obj_proximity'
 create_folder(saved_folder, clean_up=True)
 
@@ -150,4 +152,4 @@ plt.xticks(ticks, list(obj_obj_dict.keys()), rotation='vertical')
 plt.colorbar()
 plt.tight_layout()
 plt.show()
-'''
+#'''
