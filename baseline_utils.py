@@ -8,7 +8,7 @@ import numpy.linalg as LA
 import scipy.io as sio
 import cv2
 import math
-from math import cos, sin, acos, atan2, pi
+from math import cos, sin, acos, atan2, pi, floor
 from io import StringIO
 
 def minus_theta_fn(previous_theta, current_theta):
@@ -227,13 +227,41 @@ def get_class_mapper():
   class_dict = {v: k for k, v in enumerate(categories)}
   return class_dict
 
-def pxl_coords_to_pose(coords, pose_range, coords_range, cell_size=0.01):
+def pxl_coords_to_pose(coords, pose_range, coords_range, cell_size=0.1, flag_cropped=True):
   x, y = coords
-  #min_X, min_Z, max_X, max_Z = pose_range
-  #min_x, min_z, max_x, max_z = coords_range
+  min_X, min_Z, max_X, max_Z = pose_range
+  min_x, min_z, max_x, max_z = coords_range
 
-  #X = (x + min_x) * cell_size + min_X
-  #Z = (y + min_z) * cell_size + min_Z
-  X = x * cell_size
-  Z = y * cell_size
+  if flag_cropped:
+    X = (x + min_x) * cell_size + min_X
+    Z = (y + min_z) * cell_size + min_Z
+  else:
+    X = (x) * cell_size + min_X
+    Z = (y) * cell_size + min_Z
   return (X, Z)
+
+def pxl_coords_to_pose_numpy(coords, pose_range, coords_range, cell_size=0.1, flag_cropped=True):
+  min_X, min_Z, max_X, max_Z = pose_range
+  min_x, min_z, max_x, max_z = coords_range
+
+  pose = np.zeros(coords.shape)
+  if flag_cropped:
+    pose[:, 0] = (coords[:, 0] + min_x) * cell_size + min_X
+    pose[:, 1] = (coords[:, 1] + min_z) * cell_size + min_Z
+  else:
+    pose[:, 0] = (coords[:, 0]) * cell_size + min_X
+    pose[:, 1] = (coords[:, 1]) * cell_size + min_Z
+  return pose
+
+
+def pose_to_coords(cur_pose, pose_range, coords_range, cell_size=0.1, flag_cropped=True):
+  tx, tz = cur_pose[:2]
+    
+  if flag_cropped:
+    x_coord = int(floor((tx - pose_range[0]) / cell_size) - coords_range[0])
+    z_coord = int(floor((tz - pose_range[1]) / cell_size) - coords_range[1])
+  else:
+    x_coord = int(floor((tx - pose_range[0]) / cell_size))
+    z_coord = int(floor((tz - pose_range[1]) / cell_size))
+
+  return x_coord, z_coord

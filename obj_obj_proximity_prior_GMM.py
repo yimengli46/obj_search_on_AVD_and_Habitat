@@ -11,7 +11,7 @@ from sklearn.mixture import GaussianMixture
 import itertools
 
 #scene_id = 3
-dataset_dir = '/Users/yimengli/Work/object_search/Datasets/MP3D'
+dataset_dir = '/home/yimeng/Datasets/MP3D'
 GMM_param_save_folder = 'output/GMM_obj_obj_params'
 num_GMM_components = 3
 
@@ -58,14 +58,14 @@ for scene_id in range(len(scene_list)):
 	for i, a_inst in enumerate(list_insts[:-1]):
 		a_center_coords = a_inst['center']
 		a_cat = idx2cat_dict[a_inst['cat']]
-		a_center_pose = pxl_coords_to_pose(a_center_coords, pose_range, coords_range)
+		a_center_pose = pxl_coords_to_pose(a_center_coords, pose_range, coords_range, cell_size=.01, flag_cropped=True)
 		if a_cat in IGNORED_CLASS:
 			continue
 		else:
 			for j, b_inst in enumerate(list_insts[i+1:]):
 				b_center_coords = b_inst['center']
 				b_cat = idx2cat_dict[b_inst['cat']]
-				b_center_pose = pxl_coords_to_pose(b_center_coords, pose_range, coords_range)
+				b_center_pose = pxl_coords_to_pose(b_center_coords, pose_range, coords_range, cell_size=.01, flag_cropped=True)
 				
 				x_diff = b_center_pose[0] - a_center_pose[0]
 				z_diff = b_center_pose[1] - a_center_pose[1]
@@ -102,9 +102,9 @@ def visualize_GMM_dist(arr_dist, gm, k1, k2, h=400, w=400):
 	ax[1].set_title(f'GMM between {k1} and {k2}')
 	#plt.show()
 	#'''
-	fig.tight_layout()
-	fig.savefig(f'{GMM_param_save_folder}/GMM_dist_{k1}_{k2}.jpg')
-	plt.close()
+	#fig.tight_layout()
+	#fig.savefig(f'{GMM_param_save_folder}/GMM_dist_{k1}_{k2}.jpg')
+	#plt.close()
 	#'''
 	
 for i, k1 in enumerate(list(obj_obj_dict.keys())):
@@ -112,7 +112,10 @@ for i, k1 in enumerate(list(obj_obj_dict.keys())):
 		arr_dist = np.array(obj_obj_dict[k1][k2])
 		if len(arr_dist) > 5:
 			gm = GaussianMixture(n_components=num_GMM_components).fit(arr_dist)
-			params = gm.get_params()
+			params = {}
+			params['weights'] = gm.weights_
+			params['means'] = gm.means_
+			params['covariances'] = gm.covariances_
 			np.save(f'{GMM_param_save_folder}/GMM_params_{k1}_{k2}.npy', params)
 
 			#visualize_GMM_dist(arr_dist, gm, k1, k2)

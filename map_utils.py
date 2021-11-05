@@ -9,7 +9,7 @@ from baseline_utils import project_pixels_to_world_coords, convertInsSegToSSeg, 
 class SemanticMap:
 	def __init__(self):
 
-		self.dataset_dir = '/Users/yimengli/Work/object_search/Datasets/MP3D'
+		self.dataset_dir = '/home/yimeng/Datasets/MP3D'
 		self.scene_name = '2t7WUuJeko7_0'
 		self.cell_size = 0.1
 		self.UNIGNORED_CLASS = [1, 2, 3, 5, 7, 8, 10, 11, 13, 14, 15, 16, 18, 19, 22, 23, 25, 27, 28, 31, 33, 34, 36, 37, 38, 39, 40]
@@ -55,16 +55,14 @@ class SemanticMap:
 		self.four_dim_grid = np.zeros((len(self.z_grid), 2000, len(self.x_grid), 41)) # x, y, z, C
 		self.H, self.W = len(self.z_grid), len(self.x_grid)
 
-	def build_semantic_map(self, traverse_list, panorama=False):
+	def build_semantic_map(self, img_name, panorama=False):
 		img_names = []
 		if panorama:
-			for img_name in traverse_list:
-				cur_img_loc = img_name[:6]
-				for angle in ['000', '030', '060', '090', '120', '150', '180', '210', '240', '270', '300', '330']:
-					img_names.append(cur_img_loc+angle)
+			cur_img_loc = img_name[:6]
+			for angle in ['000', '030', '060', '090', '120', '150', '180', '210', '240', '270', '300', '330']:
+				img_names.append(cur_img_loc+angle)
 		else:
-			for img_name in traverse_list:
-				img_names.append(img_name)
+			img_names.append(img_name)
 		
 		for img_name in img_names:
 			# load rgb image, depth and sseg

@@ -6,7 +6,7 @@ import matplotlib.patches as patches
 import networkx as nx
 import random
 
-dataset_dir = '/Users/yimengli/Work/object_search/Datasets/MP3D'
+dataset_dir = '/home/yimeng/Datasets/MP3D'
 scene_name = '2t7WUuJeko7_0'
 
 img_act_dict = np.load('{}/{}/img_act_dict.npy'.format(dataset_dir, scene_name), allow_pickle=True).item()
@@ -62,9 +62,11 @@ def choose_direction(img_name, depth_panor, cur_node=None, num_directions=12):
 		'''
 
 def random_move(img_name):
-	action = random.choice(['forward', 'rotate_ccw', 'rotate_cw'])
-	next_img_name = img_act_dict[img_name][action]
-	return next_img_name
+	while True:
+		action = random.choice(['forward', 'rotate_ccw', 'rotate_cw'])
+		next_img_name = img_act_dict[img_name][action]
+		if len(next_img_name) > 0:
+			return next_img_name
 
 def move(img_name):
 	next_img_name = img_act_dict[img_name]['forward']
@@ -191,3 +193,4 @@ def change_brightness(img, flag, value=30):
     final_hsv = cv2.merge((h, s, v))
     img = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
     return img
+
