@@ -11,7 +11,7 @@ import skimage.measure
 from math import floor
 
 #scene_id = 3
-dataset_dir = '/home/yimeng/Datasets/MP3D'
+dataset_dir = '/Users/yimengli/Work/object_search/Datasets/MP3D'
 
 scene_list = ['2t7WUuJeko7_0']
 scene_list = ['7y3sRwLe3Va_1', '8WUmhLawc2A_0', '29hnd4uzFmX_0', 'cV4RVeZvu5T_0', 'cV4RVeZvu5T_1', 'e9zR4mvMWw7_0',]

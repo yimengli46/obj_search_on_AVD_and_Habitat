@@ -11,7 +11,7 @@ from sklearn.mixture import GaussianMixture
 import itertools
 
 #scene_id = 3
-dataset_dir = '/home/yimeng/Datasets/MP3D'
+dataset_dir = '/Users/yimengli/Work/object_search/Datasets/MP3D'
 GMM_param_save_folder = 'output/GMM_obj_obj_params'
 num_GMM_components = 3
 
@@ -115,7 +115,7 @@ for i, k1 in enumerate(list(obj_obj_dict.keys())):
 			params = gm.get_params()
 			np.save(f'{GMM_param_save_folder}/GMM_params_{k1}_{k2}.npy', params)
 
-			visualize_GMM_dist(arr_dist, gm, k1, k2)
+			#visualize_GMM_dist(arr_dist, gm, k1, k2)
 
 		
 
