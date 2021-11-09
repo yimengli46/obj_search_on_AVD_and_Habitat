@@ -62,8 +62,6 @@ while step < NUM_STEPS:
 
 		PF.observeUpdate(observed_map)
 
-
-
 		cropped_semantic_map = semantic_map[coords_range[1]:coords_range[3]+1, coords_range[0]:coords_range[2]+1]
 		color_semantic_map = apply_color_to_map(cropped_semantic_map)
 
@@ -80,7 +78,7 @@ while step < NUM_STEPS:
 			x_coord_lst.append(x_coord)
 			z_coord_lst.append(z_coord)
 
-		fig, ax = plt.subplots(nrows=2, ncols=1, figsize=(100, 100))
+		fig, ax = plt.subplots(nrows=2, ncols=1, figsize=(50, 200))
 		ax[0].imshow(color_semantic_map)
 		ax[0].get_xaxis().set_visible(False)
 		ax[0].get_yaxis().set_visible(False)
@@ -89,13 +87,14 @@ while step < NUM_STEPS:
 
 		dist_map = PF.visualizeBelief()
 		dist_map = dist_map[coords_range[1]:coords_range[3]+1, coords_range[0]:coords_range[2]+1]
-		ax[1].imshow(dist_map)
+		ax[1].imshow(dist_map, vmin=0.)
 		ax[1].get_xaxis().set_visible(False)
 		ax[1].get_yaxis().set_visible(False)
 		fig.tight_layout()
 		plt.show()
 		#plt.savefig('{}/observed_area_{}_steps.jpg'.format(saved_folder, step))
 		#plt.close()
+		#assert 1==2
 
 	#====================================== take next action ================================
 	step += 1

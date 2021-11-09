@@ -265,3 +265,17 @@ def pose_to_coords(cur_pose, pose_range, coords_range, cell_size=0.1, flag_cropp
     z_coord = int(floor((tz - pose_range[1]) / cell_size))
 
   return x_coord, z_coord
+
+def pose_to_coords_numpy(cur_pose, pose_range, coords_range, cell_size=0.1, flag_cropped=True):
+  tx, tz = cur_pose[:2]
+    
+  coords = np.zeros(cur_pose.shape)
+  if flag_cropped:
+    coords[:, 0] = (np.floor((cur_pose[:, 0] - pose_range[0]) / cell_size) - coords_range[0]).astype(int)
+    coords[:, 1] = (np.floor((cur_pose[:, 1] - pose_range[1]) / cell_size) - coords_range[1]).astype(int)
+  else:
+    coords[:, 0] = np.floor((cur_pose[:, 0] - pose_range[0]) / cell_size)
+    coords[:, 1] = np.floor((cur_pose[:, 1] - pose_range[1]) / cell_size)
+
+  coords = coords.astype(int)
+  return coords
