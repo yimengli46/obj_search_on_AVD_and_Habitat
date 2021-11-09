@@ -264,7 +264,7 @@ def pose_to_coords(cur_pose, pose_range, coords_range, cell_size=0.1, flag_cropp
     x_coord = int(floor((tx - pose_range[0]) / cell_size))
     z_coord = int(floor((tz - pose_range[1]) / cell_size))
 
-  return x_coord, z_coord
+  return (x_coord, z_coord)
 
 def pose_to_coords_numpy(cur_pose, pose_range, coords_range, cell_size=0.1, flag_cropped=True):
   tx, tz = cur_pose[:2]
