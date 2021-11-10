@@ -12,8 +12,6 @@ from navigation_utils import change_brightness
 mode = '1d_distance'
 flag_visualize_ins_weights = True
 
-
-
 if mode == '1d_distance':
 	GMM_params_folder = 'output/GMM_obj_obj_1d_prior'
 elif mode == '2d_distance':
@@ -86,11 +84,11 @@ def compute_centers(observed_semantic_map):
 
 	return list_instances
 
-def visualize_GMM_dist(gm, h=50, w=50):
+def visualize_GMM_dist(gm, h=600, w=600):
 	min_X = -w/2 * .1
 	max_X = w/2 * .1
 	min_Z = -h/2 * .1
-	max_Z = w/2 * .1
+	max_Z = h/2 * .1
 	x_grid = np.arange(min_X, max_X, 0.1)
 	z_grid = np.arange(min_Z, max_Z, 0.1)
 	xv, yv = np.meshgrid(x_grid, z_grid)
@@ -102,9 +100,10 @@ def visualize_GMM_dist(gm, h=50, w=50):
 	logprob = gm.score_samples(dists)
 	pdf = np.exp(logprob)
 	# prob_dist
-	prob_dist = pdf.reshape((h, w))
-	plt.imshow(prob_dist, vmin=.0)
-	plt.show()
+	if False:
+		prob_dist = pdf.reshape((h, w))
+		plt.imshow(prob_dist, vmin=.0, vmax=.2)
+		plt.show()
 	locs_XZ = np.zeros(locs.shape)
 	locs_XZ[:, 0] = locs[:, 1] # x
 	locs_XZ[:, 1] = locs[:, 0] # z
@@ -182,7 +181,7 @@ class ParticleFilter():
 	A particle filter for approximately tracking a single ghost.
 	"""
 	def __init__(self, numParticles, semantic_map, pose_range, coords_range):
-		self.k2 = 'table'
+		self.k2 = 'sofa'
 		self.H, self.W = semantic_map.shape[:2]
 		self.setNumParticles(numParticles)
 		self.semantic_map = semantic_map
@@ -272,7 +271,7 @@ class ParticleFilter():
 				for j in range(coords.shape[0]):
 					weights.grid[coords[j, 1], coords[j, 0]] += prob_dist[j]
 				
-				if flag_visualize_ins_weights:
+				if False:
 					color_semantic_map = apply_color_to_map(semantic_map)
 					observed_area_flag = (observed_map > 0)
 					color_semantic_map = change_brightness(color_semantic_map, observed_area_flag, value=100)
@@ -280,8 +279,8 @@ class ParticleFilter():
 					fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(200, 60))
 					color_semantic_map = color_semantic_map[self.coords_range[1]:self.coords_range[3]+1, self.coords_range[0]:self.coords_range[2]+1]
 					ax[0].imshow(color_semantic_map)
-					ax[0].get_xaxis().set_visible(False)
-					ax[0].get_yaxis().set_visible(False)
+					#ax[0].get_xaxis().set_visible(False)
+					#ax[0].get_yaxis().set_visible(False)
 					x_coord_lst = []
 					z_coord_lst = []
 					#for inst in list_instances:
@@ -292,16 +291,41 @@ class ParticleFilter():
 					
 					dist_map = weights.grid[self.coords_range[1]:self.coords_range[3]+1, self.coords_range[0]:self.coords_range[2]+1]
 					#dist_map = weights.grid
-					ax[1].imshow(dist_map, vmin=0.)
-					ax[1].get_xaxis().set_visible(False)
-					ax[1].get_yaxis().set_visible(False)
+					ax[1].imshow(dist_map, vmin=0., vmax=.2)
+					#ax[1].get_xaxis().set_visible(False)
+					#ax[1].get_yaxis().set_visible(False)
 					fig.tight_layout()
 					plt.show()
 
 		
 		#=================================== resample ================================
-		plt.imshow(weights.grid)
-		plt.show()
+		if flag_visualize_ins_weights:
+			color_semantic_map = apply_color_to_map(semantic_map)
+			observed_area_flag = (observed_map > 0)
+			color_semantic_map = change_brightness(color_semantic_map, observed_area_flag, value=100)
+
+			fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(200, 60))
+			color_semantic_map = color_semantic_map[self.coords_range[1]:self.coords_range[3]+1, self.coords_range[0]:self.coords_range[2]+1]
+			print(f'color_semantic_map.shape = {color_semantic_map.shape}')
+			ax[0].imshow(color_semantic_map)
+			#ax[0].get_xaxis().set_visible(False)
+			#ax[0].get_yaxis().set_visible(False)
+			x_coord_lst = []
+			z_coord_lst = []
+			for inst in list_instances:
+				inst_coords = inst['center']
+				x_coord_lst.append(inst_coords[0] - self.coords_range[0])
+				z_coord_lst.append(inst_coords[1] - self.coords_range[1])
+			ax[0].scatter(x_coord_lst, z_coord_lst, s=30, c='yellow', zorder=2)
+			
+			dist_map = weights.grid[self.coords_range[1]:self.coords_range[3]+1, self.coords_range[0]:self.coords_range[2]+1]
+			#dist_map = weights.grid
+			ax[1].imshow(dist_map, vmin=0.)
+			#ax[1].get_xaxis().set_visible(False)
+			#ax[1].get_yaxis().set_visible(False)
+			fig.tight_layout()
+			plt.show()
+
 		if weights.total() == 0: # corner case
 			self.initializeUniformly()
 		else:
@@ -312,7 +336,8 @@ class ParticleFilter():
 			
 			self.particles = new_particles
 			plt.imshow(self.particles, vmin=0.0)
-			plt.show()
+			#plt.show()
+			plt.close()
 
 	'''
 	def getBeliefDistribution(self):

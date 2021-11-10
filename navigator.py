@@ -56,7 +56,7 @@ while step < NUM_STEPS:
 	# add the observed area
 	sem_map.build_semantic_map(cur_img_id, panorama=vis_observed_area_from_panorama)
 
-	if step % 10 == 0:
+	if step % 100 == 0:
 		#==================================== visualize the path on the map ==============================
 		observed_map = sem_map.get_semantic_map()
 
@@ -91,9 +91,9 @@ while step < NUM_STEPS:
 		ax[1].get_xaxis().set_visible(False)
 		ax[1].get_yaxis().set_visible(False)
 		fig.tight_layout()
-		plt.show()
+		#plt.show()
 		#plt.savefig('{}/observed_area_{}_steps.jpg'.format(saved_folder, step))
-		#plt.close()
+		plt.close()
 		#assert 1==2
 
 	#====================================== take next action ================================

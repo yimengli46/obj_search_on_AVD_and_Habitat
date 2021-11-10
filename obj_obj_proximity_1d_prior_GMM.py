@@ -56,14 +56,14 @@ for scene_id in range(len(scene_list)):
 	# load instance centers
 	list_insts = np.load(f'{saved_folder}/instances_centers.npy', allow_pickle=True)
 
-	for i, a_inst in enumerate(list_insts[:-1]):
+	for i, a_inst in enumerate(list_insts):
 		a_center_coords = a_inst['center']
 		a_cat = idx2cat_dict[a_inst['cat']]
 		a_center_pose = pxl_coords_to_pose(a_center_coords, pose_range, coords_range, cell_size=.01, flag_cropped=True)
 		if a_cat in IGNORED_CLASS:
 			continue
 		else:
-			for j, b_inst in enumerate(list_insts[i+1:]):
+			for j, b_inst in enumerate(list_insts):
 				b_center_coords = b_inst['center']
 				b_cat = idx2cat_dict[b_inst['cat']]
 				b_center_pose = pxl_coords_to_pose(b_center_coords, pose_range, coords_range, cell_size=.01, flag_cropped=True)
