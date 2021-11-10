@@ -99,6 +99,7 @@ def visualize_GMM_dist(gm, h=600, w=600):
 	dists = dists.reshape(-1, 1)
 	logprob = gm.score_samples(dists)
 	pdf = np.exp(logprob)
+	pdf = pdf / np.sum(pdf) #normalize it
 	# prob_dist
 	if False:
 		prob_dist = pdf.reshape((h, w))
@@ -297,6 +298,12 @@ class ParticleFilter():
 					fig.tight_layout()
 					plt.show()
 
+		#================================== zero out weights on explored areas================================
+		mask_explored = np.logical_and(flag_observed_map, self.semantic_map != cat2idx_dict[self.k2])
+		mask_outside = (self.semantic_map == 0)
+		mask_zero_out = np.logical_or(mask_explored, mask_outside)
+		weights.grid[mask_zero_out] = 0.
+
 		
 		#=================================== resample ================================
 		if flag_visualize_ins_weights:
@@ -304,10 +311,10 @@ class ParticleFilter():
 			observed_area_flag = (observed_map > 0)
 			color_semantic_map = change_brightness(color_semantic_map, observed_area_flag, value=100)
 
-			fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(200, 60))
+			fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(200, 200))
 			color_semantic_map = color_semantic_map[self.coords_range[1]:self.coords_range[3]+1, self.coords_range[0]:self.coords_range[2]+1]
 			print(f'color_semantic_map.shape = {color_semantic_map.shape}')
-			ax[0].imshow(color_semantic_map)
+			ax.imshow(color_semantic_map)
 			#ax[0].get_xaxis().set_visible(False)
 			#ax[0].get_yaxis().set_visible(False)
 			x_coord_lst = []
@@ -316,11 +323,14 @@ class ParticleFilter():
 				inst_coords = inst['center']
 				x_coord_lst.append(inst_coords[0] - self.coords_range[0])
 				z_coord_lst.append(inst_coords[1] - self.coords_range[1])
-			ax[0].scatter(x_coord_lst, z_coord_lst, s=30, c='yellow', zorder=2)
+			ax.scatter(x_coord_lst, z_coord_lst, s=30, c='yellow', zorder=2)
+			fig.tight_layout()
+			plt.show()
 			
+			fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(200, 200))
 			dist_map = weights.grid[self.coords_range[1]:self.coords_range[3]+1, self.coords_range[0]:self.coords_range[2]+1]
 			#dist_map = weights.grid
-			ax[1].imshow(dist_map, vmin=0.)
+			ax.imshow(dist_map, vmin=0.)
 			#ax[1].get_xaxis().set_visible(False)
 			#ax[1].get_yaxis().set_visible(False)
 			fig.tight_layout()
