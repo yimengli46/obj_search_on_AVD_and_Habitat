@@ -114,7 +114,7 @@ class DiscreteDistribution_grid(object):
 	def __init__(self, H, W):
 		self.H = H
 		self.W = W
-		self.grid = np.zeros((self.H, self.W))
+		self.grid = np.ones((self.H, self.W))
 
 	def __getitem__(self, key):
 		return self.grid[key[1], key[0]]
@@ -270,7 +270,7 @@ class ParticleFilter():
 				#print(f'later, locs.shape = {locs.shape}')
 				coords = pose_to_coords_numpy(locs, self.pose_range, self.coords_range, flag_cropped=False)
 				for j in range(coords.shape[0]):
-					weights.grid[coords[j, 1], coords[j, 0]] += prob_dist[j]
+					weights.grid[coords[j, 1], coords[j, 0]] *= prob_dist[j] + 0.00001
 				
 				if False:
 					color_semantic_map = apply_color_to_map(semantic_map)
@@ -304,7 +304,7 @@ class ParticleFilter():
 		mask_zero_out = np.logical_or(mask_explored, mask_outside)
 		weights.grid[mask_zero_out] = 0.
 
-		
+		weights.normalize()
 		#=================================== resample ================================
 		if flag_visualize_ins_weights:
 			color_semantic_map = apply_color_to_map(semantic_map)
