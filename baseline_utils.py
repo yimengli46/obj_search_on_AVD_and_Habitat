@@ -113,7 +113,7 @@ def project_pixels_to_world_coords (sseg_img, current_depth, current_pose, gap=2
 
   # ignore some artifacts points with depth == 0
   depth_points = current_depth[yv.flatten(), xv.flatten()].flatten()
-  good = (depth_points > 0)
+  good = np.logical_and(depth_points > 0, depth_points < 5)
   #print(f'points_3d.shape = {points_3d.shape}')
   points_3d = points_3d[:, good]
   #print(f'points_3d.shape = {points_3d.shape}')
@@ -305,5 +305,6 @@ def save_fig_through_plt(img, name):
   ax.get_xaxis().set_visible(False)
   ax.get_xaxis().set_visible(False)
   fig.tight_layout()
+  #plt.show()
   fig.savefig(name)
   plt.close()

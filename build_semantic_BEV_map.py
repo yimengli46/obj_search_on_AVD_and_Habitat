@@ -6,15 +6,17 @@ import math
 from math import cos, sin, acos, atan2, pi, floor
 from baseline_utils import project_pixels_to_world_coords, convertInsSegToSSeg, apply_color_to_map, create_folder, save_fig_through_plt
 
+#from semantic_prediction import SemanticPredMaskRCNN
 
 dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
-#scene_list = ['Allensville_0']
+scene_list = ['Allensville_0']
+scene_list = ['Beechwood_0']
 #scene_list = ['Stockman_0', 'Pinesdale_0', 'Collierville_1', 'Shelbyville_2', 'Coffeen_0', 'Corozal_1', 'Stockman_2']
 #scene_list = ['Woodbine_0', 'Ranchester_0', 'Mifflinburg_1', 'Lakeville_1', 'Hanson_2', 'Pomaria_2', 'Wainscott_1', 'Hiteman_2', 'Coffeen_2', 'Onaga_0', 'Pomaria_0', 'Newfields_1', 'Shelbyville_0', 'Klickitat_0']
 #scene_list = ['Darden_1', 'Merom_1', 'Lindenwood_0', 'Coffeen_3', 'Klickitat_2', 'Hiteman_1', 'Forkland_2', 'Newfields_0', 'Mifflinburg_2', 'Marstons_1', 'Shelbyville_1', 'Tolstoy_1', 'Darden_0', 'Tolstoy_0']
 #scene_list = ['Marstons_3', 'Forkland_1', 'Hanson_1', 'Klickitat_1', 'Markleeville_1', 'Merom_0', 'Leonardo_2', 'Benevolence_2', 'Hiteman_0', 'Pinesdale_1', 'Hanson_0', 'Collierville_0', 'Cosmos_0', 'Newfields_2']
 #scene_list = ['Forkland_0', 'Collierville_2', 'Woodbine_1', 'Wainscott_0', 'Coffeen_1', 'Markleeville_0', 'Wiconisco_0', 'Beechwood_0', 'Mifflinburg_0', 'Lindenwood_1', 'Stockman_1']
-scene_list = ['Corozal_0', 'Pomaria_1', 'Onaga_1', 'Wiconisco_2', 'Darden_2', 'Ranchester_1', 'Cosmos_1', 'Benevolence_1', 'Leonardo_0', 'Beechwood_1', 'Lakeville_0', 'Marstons_0', 'Wiconisco_1', 'Benevolence_0', 'Leonardo_1', 'Marstons_2']
+#scene_list = ['Corozal_0', 'Pomaria_1', 'Onaga_1', 'Wiconisco_2', 'Darden_2', 'Ranchester_1', 'Cosmos_1', 'Benevolence_1', 'Leonardo_0', 'Beechwood_1', 'Lakeville_0', 'Marstons_0', 'Wiconisco_1', 'Benevolence_0', 'Leonardo_1', 'Marstons_2']
 sceneGraph_npz_folder = '/home/yimeng/Datasets/3DSceneGraph/3DSceneGraph_tiny/data/automated_graph'
 
 cell_size = 0.1
@@ -30,6 +32,9 @@ for i in range(41):
 		IGNORED_CLASS.append(i)
 '''
 
+# initialize object detector
+#sem_pred = SemanticPredMaskRCNN()
+
 semantic_map_output_folder = f'output/semantic_map'
 create_folder(semantic_map_output_folder, clean_up=False)
 
@@ -38,7 +43,7 @@ for scene_id in range(len(scene_list)):
 	scene_name = scene_list[scene_id]
 
 	saved_folder = f'{semantic_map_output_folder}/{scene_name}'
-	create_folder(saved_folder, clean_up=True)
+	create_folder(saved_folder, clean_up=False)
 
 	# load img list
 	img_act_dict = np.load('{}/{}/img_act_dict.npy'.format(dataset_dir, scene_name), allow_pickle=True).item()
@@ -159,6 +164,29 @@ for scene_id in range(len(scene_list)):
 		color_semantic_map = apply_color_to_map(cropped_semantic_map)
 
 		if idx % step_size == 0:
+			'''
+			semantic_pred, rgb_vis = sem_pred.get_prediction(rgb_img, flag_vis=True)
+
+			fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(15, 15))
+			ax[0][0].imshow(rgb_img)
+			ax[0][0].get_xaxis().set_visible(False)
+			ax[0][0].get_yaxis().set_visible(False)
+			ax[0][0].set_title("rgb")
+			ax[0][1].imshow(apply_color_to_map(sseg_img))
+			ax[0][1].get_xaxis().set_visible(False)
+			ax[0][1].get_yaxis().set_visible(False)
+			ax[0][1].set_title("sseg")
+			ax[1][0].imshow(depth_img)
+			ax[1][0].get_xaxis().set_visible(False)
+			ax[1][0].get_yaxis().set_visible(False)
+			ax[1][0].set_title("depth")
+			ax[1][1].imshow(rgb_vis)
+			ax[1][1].get_xaxis().set_visible(False)
+			ax[1][1].get_yaxis().set_visible(False)
+			ax[1][1].set_title("sem_pred")
+			fig.tight_layout()
+			plt.show()
+			'''
 			# write the map with cv2 so the map image can be load directly
 			#cv2.imwrite('{}/step_{}_semantic.jpg'.format(saved_folder, idx), color_semantic_map[:, :, ::-1])
 			save_fig_through_plt(color_semantic_map, f'{saved_folder}/step_{idx}_semantic.jpg')
