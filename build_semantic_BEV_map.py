@@ -11,12 +11,12 @@ from baseline_utils import project_pixels_to_world_coords, convertInsSegToSSeg, 
 dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
 scene_list = ['Allensville_0']
 scene_list = ['Beechwood_0']
-#scene_list = ['Stockman_0', 'Pinesdale_0', 'Collierville_1', 'Shelbyville_2', 'Coffeen_0', 'Corozal_1', 'Stockman_2']
-#scene_list = ['Woodbine_0', 'Ranchester_0', 'Mifflinburg_1', 'Lakeville_1', 'Hanson_2', 'Pomaria_2', 'Wainscott_1', 'Hiteman_2', 'Coffeen_2', 'Onaga_0', 'Pomaria_0', 'Newfields_1', 'Shelbyville_0', 'Klickitat_0']
-#scene_list = ['Darden_1', 'Merom_1', 'Lindenwood_0', 'Coffeen_3', 'Klickitat_2', 'Hiteman_1', 'Forkland_2', 'Newfields_0', 'Mifflinburg_2', 'Marstons_1', 'Shelbyville_1', 'Tolstoy_1', 'Darden_0', 'Tolstoy_0']
-#scene_list = ['Marstons_3', 'Forkland_1', 'Hanson_1', 'Klickitat_1', 'Markleeville_1', 'Merom_0', 'Leonardo_2', 'Benevolence_2', 'Hiteman_0', 'Pinesdale_1', 'Hanson_0', 'Collierville_0', 'Cosmos_0', 'Newfields_2']
-#scene_list = ['Forkland_0', 'Collierville_2', 'Woodbine_1', 'Wainscott_0', 'Coffeen_1', 'Markleeville_0', 'Wiconisco_0', 'Beechwood_0', 'Mifflinburg_0', 'Lindenwood_1', 'Stockman_1']
-#scene_list = ['Corozal_0', 'Pomaria_1', 'Onaga_1', 'Wiconisco_2', 'Darden_2', 'Ranchester_1', 'Cosmos_1', 'Benevolence_1', 'Leonardo_0', 'Beechwood_1', 'Lakeville_0', 'Marstons_0', 'Wiconisco_1', 'Benevolence_0', 'Leonardo_1', 'Marstons_2']
+scene_list = ['Hanson_0', 'Stockman_0', 'Pinesdale_0', 'Collierville_1', 'Shelbyville_2', 'Coffeen_0', 'Corozal_1', 'Stockman_2']
+scene_list = ['Woodbine_0', 'Ranchester_0', 'Mifflinburg_1', 'Lakeville_1', 'Hanson_2', 'Pomaria_2', 'Wainscott_1', 'Hiteman_2', 'Coffeen_2', 'Onaga_0', 'Pomaria_0', 'Newfields_1', 'Shelbyville_0', 'Klickitat_0']
+scene_list = ['Darden_1', 'Merom_1', 'Lindenwood_0', 'Coffeen_3', 'Klickitat_2', 'Hiteman_1', 'Forkland_2', 'Newfields_0', 'Mifflinburg_2', 'Marstons_1', 'Shelbyville_1', 'Tolstoy_1', 'Darden_0', 'Tolstoy_0']
+scene_list = ['Marstons_3', 'Forkland_1', 'Hanson_1', 'Klickitat_1', 'Markleeville_1', 'Merom_0', 'Leonardo_2', 'Benevolence_2', 'Hiteman_0', 'Pinesdale_1', 'Collierville_0', 'Cosmos_0', 'Newfields_2']
+scene_list = ['Forkland_0', 'Collierville_2', 'Woodbine_1', 'Wainscott_0', 'Coffeen_1', 'Markleeville_0', 'Wiconisco_0', 'Mifflinburg_0', 'Lindenwood_1', 'Stockman_1']
+scene_list = ['Corozal_0', 'Pomaria_1', 'Onaga_1', 'Wiconisco_2', 'Darden_2', 'Ranchester_1', 'Cosmos_1', 'Benevolence_1', 'Leonardo_0', 'Beechwood_1', 'Lakeville_0', 'Marstons_0', 'Wiconisco_1', 'Benevolence_0', 'Leonardo_1', 'Marstons_2']
 sceneGraph_npz_folder = '/home/yimeng/Datasets/3DSceneGraph/3DSceneGraph_tiny/data/automated_graph'
 
 cell_size = 0.1
@@ -90,6 +90,7 @@ for scene_id in range(len(scene_list)):
 		rgb_img = cv2.imread(f'{dataset_dir}/{scene_name}/rgb/{img_name}.jpg', 1)[:, :, ::-1]
 		depth_img = cv2.imread(f'{dataset_dir}/{scene_name}/depth/{img_name}.png', cv2.IMREAD_UNCHANGED)
 		depth_img = depth_img/256.
+		depth_img = cv2.blur(depth_img, (3,3))
 		InsSeg_img = cv2.imread(f'{dataset_dir}/{scene_name}/sseg/{img_name}.png', cv2.IMREAD_UNCHANGED)
 		sseg_img = convertInsSegToSSeg(InsSeg_img, scene_graph_npz, cat2id_dict)
 		pose = img_act_dict[img_name]['pose'] # x, z, theta
