@@ -35,7 +35,15 @@ class SemanticPredMaskRCNN():
             img = vis_output.get_image()
 
         semantic_input = np.zeros((img.shape[0], img.shape[1], 15 + 1))
+        #print(seg_predictions[0]['instances'])
 
+        pred_dict = {}
+        #pred_dict['boxes'] = seg_predictions[0]['instances'].pred_boxes.cpu().numpy()
+        pred_dict['scores'] = seg_predictions[0]['instances'].scores.cpu().numpy()
+        pred_dict['classes'] = seg_predictions[0]['instances'].pred_classes.cpu().numpy()
+        pred_dict['masks'] = seg_predictions[0]['instances'].pred_masks.cpu().numpy()
+
+        '''
         for j, class_idx in enumerate(
                 seg_predictions[0]['instances'].pred_classes.cpu().numpy()):
             if class_idx in list(coco_categories_mapping.keys()):
@@ -44,6 +52,8 @@ class SemanticPredMaskRCNN():
                 semantic_input[:, :, idx] += obj_mask.cpu().numpy()
 
         return semantic_input, img
+        '''
+        return pred_dict, img
 
 
 def compress_sem_map(sem_map):
