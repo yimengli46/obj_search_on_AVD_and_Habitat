@@ -1,2 +1,4 @@
 output/
 __pycache__/
+detectron2_pred/
+.DS_Store
