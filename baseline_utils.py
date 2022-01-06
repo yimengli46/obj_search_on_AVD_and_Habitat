@@ -11,6 +11,7 @@ import math
 from math import cos, sin, acos, atan2, pi, floor, tan
 from io import StringIO
 import matplotlib.pyplot as plt
+from constants import coco_categories_mapping
 
 def minus_theta_fn(previous_theta, current_theta):
   result = current_theta - previous_theta
@@ -140,6 +141,21 @@ def convertInsSegToSSeg (InsSeg, scene_graph_npz, cat2id_dict):
     cat_id = cat2id_dict[scene_graph_npz['object'][ins_id]['class_']]
     SSeg = np.where(InsSeg==ins_id, cat_id, SSeg)
 
+  return SSeg
+
+def convertDetectron2ToSSeg (detectron2_npy, H=480, W=640, det_thresh=0.5):
+  #print(detectron2_npy)
+  SSeg = np.zeros((H, W), dtype=np.int32) # 15 semantic categories
+  idxs = list(range(len(detectron2_npy['classes'])))
+  #print(f'idxs = {idxs}')
+  for j in idxs[::-1]:
+    class_idx = detectron2_npy['classes'][j]
+    score = detectron2_npy['scores'][j]
+    #print(f'j = {j}, class = {class_idx}')
+    if class_idx in list(coco_categories_mapping.keys()) and score > det_thresh:
+      idx = coco_categories_mapping[class_idx] + 1 # first class has index 0
+      obj_mask = detectron2_npy['masks'][j]
+      SSeg = np.where(obj_mask, idx, SSeg)
   return SSeg
 
 

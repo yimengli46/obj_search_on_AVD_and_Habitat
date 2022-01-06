@@ -4,7 +4,7 @@ import cv2
 import matplotlib.pyplot as plt
 import math
 from math import cos, sin, acos, atan2, pi, floor
-from baseline_utils import project_pixels_to_world_coords, convertInsSegToSSeg, apply_color_to_map, create_folder, save_fig_through_plt
+from baseline_utils import project_pixels_to_world_coords, convertDetectron2ToSSeg, apply_color_to_map, create_folder, save_fig_through_plt
 
 #from semantic_prediction import SemanticPredMaskRCNN
 
@@ -35,7 +35,7 @@ for i in range(41):
 # initialize object detector
 #sem_pred = SemanticPredMaskRCNN()
 
-semantic_map_output_folder = f'output/semantic_map'
+semantic_map_output_folder = f'output/semantic_map_detectron2'
 create_folder(semantic_map_output_folder, clean_up=False)
 
 for scene_id in range(len(scene_list)):
@@ -52,6 +52,7 @@ for scene_id in range(len(scene_list)):
 	#================================== load scene npz and category dict ======================================
 	scene_graph_npz = np.load(f'{sceneGraph_npz_folder}/3DSceneGraph_{scene_name[:-2]}.npz', allow_pickle=True)['output'].item()
 	cat2id_dict = np.load('{}/{}/category_id_dict.npy'.format(dataset_dir, scene_name), allow_pickle=True).item()
+	detectron2_folder = f'/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset/{scene_name}/detectron2_pred'
 
 	#======================================= initialize the grid ===========================================
 	min_X = 1000.0
@@ -91,10 +92,12 @@ for scene_id in range(len(scene_list)):
 		depth_img = cv2.imread(f'{dataset_dir}/{scene_name}/depth/{img_name}.png', cv2.IMREAD_UNCHANGED)
 		depth_img = depth_img/256.
 		depth_img = cv2.blur(depth_img, (3,3))
-		InsSeg_img = cv2.imread(f'{dataset_dir}/{scene_name}/sseg/{img_name}.png', cv2.IMREAD_UNCHANGED)
-		sseg_img = convertInsSegToSSeg(InsSeg_img, scene_graph_npz, cat2id_dict)
+		detectron2_npy = np.load(f'{detectron2_folder}/{img_name}.npy', allow_pickle=True).item()
+		sseg_img = convertDetectron2ToSSeg(detectron2_npy, det_thresh=0.9)
 		pose = img_act_dict[img_name]['pose'] # x, z, theta
 		print('pose = {}'.format(pose))
+
+		#assert 1==2
 
 		if idx % step_size == 0:
 			'''
@@ -165,29 +168,6 @@ for scene_id in range(len(scene_list)):
 		color_semantic_map = apply_color_to_map(cropped_semantic_map)
 
 		if idx % step_size == 0:
-			'''
-			semantic_pred, rgb_vis = sem_pred.get_prediction(rgb_img, flag_vis=True)
-
-			fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(15, 15))
-			ax[0][0].imshow(rgb_img)
-			ax[0][0].get_xaxis().set_visible(False)
-			ax[0][0].get_yaxis().set_visible(False)
-			ax[0][0].set_title("rgb")
-			ax[0][1].imshow(apply_color_to_map(sseg_img))
-			ax[0][1].get_xaxis().set_visible(False)
-			ax[0][1].get_yaxis().set_visible(False)
-			ax[0][1].set_title("sseg")
-			ax[1][0].imshow(depth_img)
-			ax[1][0].get_xaxis().set_visible(False)
-			ax[1][0].get_yaxis().set_visible(False)
-			ax[1][0].set_title("depth")
-			ax[1][1].imshow(rgb_vis)
-			ax[1][1].get_xaxis().set_visible(False)
-			ax[1][1].get_yaxis().set_visible(False)
-			ax[1][1].set_title("sem_pred")
-			fig.tight_layout()
-			plt.show()
-			'''
 			# write the map with cv2 so the map image can be load directly
 			#cv2.imwrite('{}/step_{}_semantic.jpg'.format(saved_folder, idx), color_semantic_map[:, :, ::-1])
 			save_fig_through_plt(color_semantic_map, f'{saved_folder}/step_{idx}_semantic.jpg')
