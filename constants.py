@@ -71,6 +71,38 @@ coco_categories_mapping = {
     39: 14,  # bottle
 }
 
+panopticSeg_mapping = {
+    ## thing list, same as Devendra's
+    57: 1,   # chair
+    58: 2,  # couch
+    59: 3,  # potted plant
+    60: 4,  # bed
+    62: 5,  # toilet
+    63: 6,  # tv
+    61: 7,  # dining-table
+    70: 8,  # oven
+    72: 9,  # sink
+    73: 10,  # refrigerator
+    74: 11,  # book
+    75: 12,  # clock
+    76: 13,  # vase
+    42: 14,  # cup
+    40: 15,  # bottle
+    ## stuff list, selected by myself
+    87: 16, # curtain
+    88: 17, # door-stuff
+    90: 18, # flower
+    95: 19, # mirror-stuff    
+    106: 20, # shelf
+    108: 21, # stairs
+    117: 22, # window
+    120: 23, # ceiling
+    122: 24, # cabinet
+    123: 25, # table
+    124: 26, # floor
+    133: 27, # wall
+}
+
 color_palette = [
     1.0, 1.0, 1.0,
     0.6, 0.6, 0.6,

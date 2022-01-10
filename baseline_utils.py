@@ -11,7 +11,7 @@ import math
 from math import cos, sin, acos, atan2, pi, floor, tan
 from io import StringIO
 import matplotlib.pyplot as plt
-from constants import coco_categories_mapping
+from constants import coco_categories_mapping, panopticSeg_mapping
 
 def minus_theta_fn(previous_theta, current_theta):
   result = current_theta - previous_theta
@@ -143,7 +143,7 @@ def convertInsSegToSSeg (InsSeg, scene_graph_npz, cat2id_dict):
 
   return SSeg
 
-def convertDetectron2ToSSeg (detectron2_npy, H=480, W=640, det_thresh=0.5):
+def convertMaskRCNNToSSeg (detectron2_npy, H=480, W=640, det_thresh=0.5):
   #print(detectron2_npy)
   SSeg = np.zeros((H, W), dtype=np.int32) # 15 semantic categories
   idxs = list(range(len(detectron2_npy['classes'])))
@@ -156,6 +156,14 @@ def convertDetectron2ToSSeg (detectron2_npy, H=480, W=640, det_thresh=0.5):
       idx = coco_categories_mapping[class_idx] + 1 # first class has index 0
       obj_mask = detectron2_npy['masks'][j]
       SSeg = np.where(obj_mask, idx, SSeg)
+  return SSeg
+
+def convertPanopSegToSSeg (PanopSeg, id2cat_dict):
+  SSeg = np.zeros(PanopSeg.shape, dtype=np.int32)
+  for cat_id in list(panopticSeg_mapping.keys()):
+    mapped_cat_id = panopticSeg_mapping[cat_id]
+    SSeg = np.where(PanopSeg==cat_id, mapped_cat_id, SSeg)
+
   return SSeg
 
 

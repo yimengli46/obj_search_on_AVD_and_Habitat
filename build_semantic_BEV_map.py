@@ -4,7 +4,7 @@ import cv2
 import matplotlib.pyplot as plt
 import math
 from math import cos, sin, acos, atan2, pi, floor
-from baseline_utils import project_pixels_to_world_coords, convertInsSegToSSeg, apply_color_to_map, create_folder, save_fig_through_plt
+from baseline_utils import project_pixels_to_world_coords, convertInsSegToSSeg, convertMaskRCNNToSSeg, convertPanopSegToSSeg, apply_color_to_map, create_folder, save_fig_through_plt
 
 #from semantic_prediction import SemanticPredMaskRCNN
 
@@ -25,7 +25,9 @@ step_size = 50
 map_boundary = 5
 y_coord_size = 1000
 flag_first_time_having_pixels = True
-IGNORED_CLASS = [0]
+IGNORED_CLASS = [0, 23] # 'unlabeld', 'ceiling'
+detector = 'PanopticSeg' #'InstanceSeg'
+
 '''
 for i in range(41):
 	if i not in UNIGNORED_CLASS:
@@ -35,7 +37,10 @@ for i in range(41):
 # initialize object detector
 #sem_pred = SemanticPredMaskRCNN()
 
-semantic_map_output_folder = f'output/semantic_map'
+if detector == 'InstanceSeg':
+	semantic_map_output_folder = f'output/semantic_map_InstanceSeg'
+elif detector == 'PanopticSeg':
+	semantic_map_output_folder = f'output/semantic_map_PanopticSeg'
 create_folder(semantic_map_output_folder, clean_up=False)
 
 for scene_id in range(len(scene_list)):
@@ -52,6 +57,11 @@ for scene_id in range(len(scene_list)):
 	#================================== load scene npz and category dict ======================================
 	scene_graph_npz = np.load(f'{sceneGraph_npz_folder}/3DSceneGraph_{scene_name[:-2]}.npz', allow_pickle=True)['output'].item()
 	cat2id_dict = np.load('{}/{}/category_id_dict.npy'.format(dataset_dir, scene_name), allow_pickle=True).item()
+	if detector == 'InstanceSeg':
+		detectron2_folder = f'{dataset_dir}/{scene_name}/detectron2_pred'
+	elif detector == 'PanopticSeg':
+		detectron2_folder = f'{dataset_dir}/{scene_name}/panoptic_pred'
+		id2class_mapper = np.load('configs/COCO_PanopticSeg_labels_dict.npy', allow_pickle=True).item()
 
 	#======================================= initialize the grid ===========================================
 	min_X = 1000.0
@@ -91,8 +101,12 @@ for scene_id in range(len(scene_list)):
 		depth_img = cv2.imread(f'{dataset_dir}/{scene_name}/depth/{img_name}.png', cv2.IMREAD_UNCHANGED)
 		depth_img = depth_img/256.
 		depth_img = cv2.blur(depth_img, (3,3))
-		InsSeg_img = cv2.imread(f'{dataset_dir}/{scene_name}/sseg/{img_name}.png', cv2.IMREAD_UNCHANGED)
-		sseg_img = convertInsSegToSSeg(InsSeg_img, scene_graph_npz, cat2id_dict)
+		if detector == 'InstanceSeg':
+			detectron2_npy = np.load(f'{detectron2_folder}/{img_name}.npy', allow_pickle=True).item()
+			sseg_img = convertMaskRCNNToSSeg(detectron2_npy, det_thresh=0.9)
+		elif detector == 'PanopticSeg':
+			panopSeg_img = cv2.imread(f'{detectron2_folder}/{img_name}.png', cv2.IMREAD_UNCHANGED)
+			sseg_img = convertPanopSegToSSeg(panopSeg_img, id2class_mapper)
 		pose = img_act_dict[img_name]['pose'] # x, z, theta
 		print('pose = {}'.format(pose))
 
