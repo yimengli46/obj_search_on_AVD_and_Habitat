@@ -54,15 +54,17 @@ for scene_id in range(len(scene_list)):
 	img_act_dict = np.load('{}/{}/img_act_dict.npy'.format(dataset_dir, scene_name), allow_pickle=True).item()
 	img_names = list(img_act_dict.keys())
 
-	#for idx, img_name in enumerate(img_names):
-	for idx, img_name in enumerate(['077122135', '077122180', '079120135', '089126315']):
+	for idx, img_name in enumerate(img_names):
+	#for idx, img_name in enumerate(['077122135', '077122180', '079120135', '089126315']):
 
 		print('idx = {}'.format(idx))
 		#====================================== load rgb image, depth and sseg ==================================
 		rgb_img = cv2.imread(f'{dataset_dir}/{scene_name}/rgb/{img_name}.jpg', 1)[:, :, ::-1]
 
 		semantic_pred, img = sem_pred.get_prediction(rgb_img, flag_vis=True)
+		#plt.imshow(img)
+		#plt.show()
 
-		#np.save(f'{saved_folder}/{img_name}.npy', semantic_pred)
+		cv2.imwrite(f'{saved_folder}/{img_name}.png', semantic_pred)
 
-		assert 1==2
+		#assert 1==2

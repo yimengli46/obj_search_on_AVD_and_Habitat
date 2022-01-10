@@ -23,6 +23,11 @@ class PanopPred():
 
     def __init__(self):
         self.segmentation_model = ImageSegmentation()
+        self.thing_list = MetadataCatalog.get("coco_2017_train_panoptic_separated").thing_classes
+        self.stuff_list = MetadataCatalog.get("coco_2017_train_panoptic_separated").stuff_classes
+        whole_list = self.thing_list + self.stuff_list
+        self.whole2id_mapper = {whole_list[i] : i+1 for i in range(len(whole_list))}
+        self.id2whole_mapper = {i+1 : whole_list[i] for i in range(len(whole_list))}
 
     def get_prediction(self, img, flag_vis=False):
         image_list = []
@@ -34,11 +39,24 @@ class PanopPred():
         if flag_vis:
             img = vis_output.get_image()
 
-        pred_dict = {}
-        pred_dict['info'] = seg_predictions[0]['panoptic_seg'][1]
-        pred_dict['mask'] = seg_predictions[0]['panoptic_seg'][0].cpu().numpy().astype(np.int16)
+        panoptic_seg, segments_info = seg_predictions[0]["panoptic_seg"]
+        panoptic_seg = panoptic_seg.cpu().numpy()
 
-        return pred_dict, img
+        h, w, _ = img.shape
+        semseg = np.zeros((h, w), dtype=np.uint8)
+        num_segs = len(segments_info)
+        for i in range(num_segs):
+            seg_dict = segments_info[i]
+            if seg_dict['isthing']:
+                cat_name = self.thing_list[seg_dict['category_id']]
+            else:
+                cat_name = self.stuff_list[seg_dict['category_id']]
+            #print(f'i = {i}, name = {cat_name}')
+
+            whole_list_id = self.whole2id_mapper[cat_name]
+            semseg = np.where(panoptic_seg == seg_dict['id'], whole_list_id, semseg)
+
+        return semseg, img
 
 
 def compress_sem_map(sem_map):
