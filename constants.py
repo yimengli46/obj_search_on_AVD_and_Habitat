@@ -54,21 +54,21 @@ coco_categories = {
 }
 
 coco_categories_mapping = {
-    56: 0,  # chair
-    57: 1,  # couch
-    58: 2,  # potted plant
-    59: 3,  # bed
-    61: 4,  # toilet
-    62: 5,  # tv
-    60: 6,  # dining-table
-    69: 7,  # oven
-    71: 8,  # sink
-    72: 9,  # refrigerator
-    73: 10,  # book
-    74: 11,  # clock
-    75: 12,  # vase
-    41: 13,  # cup
-    39: 14,  # bottle
+    56: 1,  # chair
+    57: 2,  # couch
+    58: 3,  # potted plant
+    59: 4,  # bed
+    61: 5,  # toilet
+    62: 6,  # tv
+    60: 7,  # dining-table
+    69: 8,  # oven
+    71: 9,  # sink
+    72: 10,  # refrigerator
+    73: 11,  # book
+    74: 12,  # clock
+    75: 13,  # vase
+    41: 14,  # cup
+    39: 15,  # bottle
 }
 
 panopticSeg_mapping = {

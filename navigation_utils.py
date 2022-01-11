@@ -6,11 +6,10 @@ import matplotlib.patches as patches
 import networkx as nx
 import random
 
-dataset_dir = '/home/yimeng/Datasets/MP3D'
-scene_name = '2t7WUuJeko7_0'
+dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
+scene_name = 'Allensville_0'
 
 img_act_dict = np.load('{}/{}/img_act_dict.npy'.format(dataset_dir, scene_name), allow_pickle=True).item()
-ins2cat_dict = np.load('{}/{}/dict_ins2category.npy'.format(dataset_dir, scene_name), allow_pickle=True).item()
 all_img_names = list(img_act_dict.keys())
 
 graph = nx.DiGraph()
@@ -23,9 +22,10 @@ for img_id in list(img_act_dict.keys()):
 			graph.add_edge(img_id, next_img_id)
 
 def get_obs(img_name):
-	rgb_img = cv2.imread('{}/{}/images/{}.jpg'.format(dataset_dir, scene_name, img_name), 1)[:, :, ::-1]
-	npy_file = np.load('{}/{}/others/{}.npy'.format(dataset_dir, scene_name, img_name), allow_pickle=True).item()
-	depth_img = npy_file['depth']
+	rgb_img = cv2.imread(f'{dataset_dir}/{scene_name}/rgb/{img_name}.jpg', 1)[:, :, ::-1]
+	depth_img = cv2.imread(f'{dataset_dir}/{scene_name}/depth/{img_name}.png', cv2.IMREAD_UNCHANGED)
+	depth_img = depth_img/256.
+	depth_img = cv2.blur(depth_img, (3,3))
 	return rgb_img, depth_img
 
 def get_pose(img_name):

@@ -71,7 +71,7 @@ class ImageSegmentation():
             --confidence-threshold {}
             --opts MODEL.WEIGHTS
             detectron2://COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x/137849600/model_final_f10217.pkl
-            """.format(0.5)
+            """.format(0.9)
 
         string_args += """ MODEL.DEVICE cuda:{}""".format(0)
 

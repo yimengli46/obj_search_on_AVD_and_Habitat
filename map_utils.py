@@ -4,7 +4,7 @@ import cv2
 import matplotlib.pyplot as plt
 import math
 from math import cos, sin, acos, atan2, pi, floor
-from baseline_utils import project_pixels_to_world_coords, convertInsSegToSSeg, apply_color_to_map
+from baseline_utils import project_pixels_to_world_coords, convertPanopSegToSSeg, apply_color_to_map
 
 class SemanticMap:
 	def __init__(self):
@@ -12,22 +12,19 @@ class SemanticMap:
 		self.dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
 		self.scene_name = 'Allensville_0'
 		self.cell_size = 0.1
-		self.UNIGNORED_CLASS = [1, 2, 3, 5, 7, 8, 10, 11, 13, 14, 15, 16, 18, 19, 22, 23, 25, 27, 28, 31, 33, 34, 36, 37, 38, 39, 40]
+		self.UNIGNORED_CLASS = []
 		self.saved_folder = 'results'
 		self.step_size = 100
 		self.first_num_images = 100
 		self.map_boundary = 5
 
-		self.IGNORED_CLASS = []
-		for i in range(41):
-			if i not in self.UNIGNORED_CLASS:
-				self.IGNORED_CLASS.append(i)
+		self.IGNORED_CLASS = [23+1]
 
 		# load img list
 		self.img_act_dict = np.load('{}/{}/img_act_dict.npy'.format(self.dataset_dir, self.scene_name), allow_pickle=True).item()
 		self.img_names = list(self.img_act_dict.keys())
-
-		self.ins2cat_dict = np.load('{}/{}/dict_ins2category.npy'.format(self.dataset_dir, self.scene_name), allow_pickle=True).item()
+		self.detectron2_folder = f'{self.dataset_dir}/{self.scene_name}/panoptic_pred'
+		self.id2class_mapper = np.load('configs/COCO_PanopticSeg_labels_dict.npy', allow_pickle=True).item()
 
 		self.min_X = 1000.0
 		self.max_X = -1000.0
@@ -66,11 +63,13 @@ class SemanticMap:
 		
 		for img_name in img_names:
 			# load rgb image, depth and sseg
-			rgb_img = cv2.imread('{}/{}/images/{}.jpg'.format(self.dataset_dir, self.scene_name, img_name), 1)[:, :, ::-1]
-			npy_file = np.load('{}/{}/others/{}.npy'.format(self.dataset_dir, self.scene_name, img_name), allow_pickle=True).item()
-			InsSeg_img = npy_file['sseg']
-			sseg_img = convertInsSegToSSeg(InsSeg_img, self.ins2cat_dict)
-			depth_img = npy_file['depth']
+			rgb_img = cv2.imread(f'{self.dataset_dir}/{self.scene_name}/rgb/{img_name}.jpg', 1)[:, :, ::-1]
+			depth_img = cv2.imread(f'{self.dataset_dir}/{self.scene_name}/depth/{img_name}.png', cv2.IMREAD_UNCHANGED)
+			depth_img = depth_img/256.
+			depth_img = cv2.blur(depth_img, (3,3))
+			panopSeg_img = cv2.imread(f'{self.detectron2_folder}/{img_name}.png', cv2.IMREAD_UNCHANGED)
+			sseg_img = convertPanopSegToSSeg(panopSeg_img, self.id2class_mapper)
+			sseg_img += 1
 			pose = self.img_act_dict[img_name]['pose'] # x, z, theta
 			#print('pose = {}'.format(pose))
 
@@ -86,7 +85,7 @@ class SemanticMap:
 			x_coord = np.floor((xyz_points[0, :] - self.min_X) / self.cell_size).astype(int)
 			y_coord = np.floor(xyz_points[1, :] / self.cell_size).astype(int)
 			z_coord = np.floor((xyz_points[2, :] - self.min_Z) / self.cell_size).astype(int)
-			mask_y_coord = y_coord < 2000
+			mask_y_coord = y_coord < 1000
 			x_coord = x_coord[mask_y_coord]
 			y_coord = y_coord[mask_y_coord]
 			z_coord = z_coord[mask_y_coord]

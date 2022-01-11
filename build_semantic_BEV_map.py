@@ -26,7 +26,7 @@ map_boundary = 5
 y_coord_size = 1000
 flag_first_time_having_pixels = True
 IGNORED_CLASS = [0, 23] # 'unlabeld', 'ceiling'
-detector = 'PanopticSeg' #'InstanceSeg'
+detector = 'InstanceSeg' #'InstanceSeg'
 
 '''
 for i in range(41):
