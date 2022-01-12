@@ -100,7 +100,10 @@ class SemanticMap:
 		# argmax over the category axis
 		semantic_map = np.argmax(grid_sum_height, axis=2)
 
-		return semantic_map
+		grid_sum_cat = np.sum(grid_sum_height, axis=2)
+		observed_area_flag = (grid_sum_cat > 0)
+
+		return semantic_map, observed_area_flag
 
 		'''
 		# get the local map

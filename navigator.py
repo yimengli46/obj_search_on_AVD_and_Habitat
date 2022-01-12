@@ -35,7 +35,7 @@ semantic_map, pose_range, coords_range = read_map_npy(sem_map_npy)
 H, W = semantic_map.shape[:2]
 occ_map = np.load(f'output/semantic_map/{scene_name}/BEV_occupancy_map.npy', allow_pickle=True)
 
-PF = ParticleFilter(H*W, semantic_map, pose_range, coords_range)
+PF = ParticleFilter(H*W, semantic_map.copy(), pose_range, coords_range)
 dist_map = PF.visualizeBelief()
 plt.imshow(dist_map, vmin=0., vmax=.3)
 plt.title('initial particle distribution')
@@ -60,11 +60,13 @@ while step < NUM_STEPS:
 
 	if step % 50 == 0:
 		#==================================== visualize the path on the map ==============================
-		observed_map = sem_map.get_semantic_map()
+		observed_map, observed_area_flag = sem_map.get_semantic_map()
 
+
+		observed_area_flag = (observed_area_flag[coords_range[1]:coords_range[3]+1, coords_range[0]:coords_range[2]+1])
+		mask_observed_and_non_obj = np.logical_and(observed_area_flag, semantic_map == 0)
+		semantic_map[mask_observed_and_non_obj] = 40
 		color_semantic_map = apply_color_to_map(semantic_map)
-
-		observed_area_flag = (observed_map[coords_range[1]:coords_range[3]+1, coords_range[0]:coords_range[2]+1] > 0)
 		color_semantic_map = change_brightness(color_semantic_map, observed_area_flag, value=100)
 		#assert 1==2
 

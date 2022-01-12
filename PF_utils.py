@@ -57,7 +57,7 @@ def compute_centers(observed_semantic_map):
 	y = np.linspace(0, H-1, H)
 	xv, yv = np.meshgrid(x, y)
 	#====================================== compute centers of semantic classes =====================================
-	IGNORED_CLASS = [0]
+	IGNORED_CLASS = [0, 40]
 	cat_binary_map = observed_semantic_map.copy()
 	for cat in IGNORED_CLASS:
 		cat_binary_map = np.where(cat_binary_map==cat, -1, cat_binary_map)
@@ -106,10 +106,10 @@ def visualize_GMM_dist(weight=1., size=1.):
 	locs = np.stack((yv, xv), axis=1)
 	dists = np.sqrt(locs[:, 0]**2 + locs[:, 1]**2)
 	dists = dists.reshape(-1, 1)
-	pdf = np.ones(dists.shape) / dists.shape[0]
+	pdf = np.ones(dists.shape) #/ dists.shape[0]
 	pdf[dists <= size] = 0.
 	pdf[dists > radius] = 0.
-	pdf = pdf / np.sum(pdf) #normalize it
+	#pdf = pdf / np.sum(pdf) #normalize it
 	# prob_dist
 	if False:
 		prob_dist = pdf.reshape((h, w))
@@ -124,7 +124,7 @@ class DiscreteDistribution_grid(object):
 	def __init__(self, H, W):
 		self.H = H
 		self.W = W
-		self.grid = np.zeros((self.H, self.W))
+		self.grid = np.ones((self.H, self.W))
 
 	def __getitem__(self, key):
 		return self.grid[key[1], key[0]]
@@ -233,6 +233,8 @@ class ParticleFilter():
 		#=================================== observe =================================
 		semantic_map = self.semantic_map.copy()
 		semantic_map[observed_area_flag == False] = 0
+		mask_observed_and_non_obj = np.logical_and(observed_area_flag, semantic_map == 0)
+		semantic_map[mask_observed_and_non_obj] = 40
 		color_semantic_map = apply_color_to_map(semantic_map)
 		#plt.imshow(color_semantic_map)
 		#plt.show()
@@ -263,12 +265,9 @@ class ParticleFilter():
 		for idx, inst in enumerate(list_instances):
 			inst_pose = pxl_coords_to_pose(inst['center'], self.pose_range, self.coords_range, flag_cropped=True)
 			k1 = idx2cat_dict[inst['cat']]
-			weight_k1 = get_cooccurred_object_weight(self.k2, k1)
-			# load GMM
-			if weight_k1 > 0:
+			if k1 == self.k2: # target object is detected
 				locs, prob_dist = visualize_GMM_dist(weight_k1, inst['size'])
-				#print(f'locs.shape = {locs.shape}')
-				#=================== shift the probability grid centered at the object center ===============
+				prob_dist *= 10000
 				locs[:, 1] += inst_pose[1]
 				locs[:, 0] += inst_pose[0]
 				coords = pose_to_coords_numpy(locs, self.pose_range, self.coords_range, flag_cropped=True)
@@ -285,6 +284,29 @@ class ParticleFilter():
 				for j in range(coords.shape[0]):
 					#print(f'coords[{j}]={coords[j]}')
 					weights.grid[coords[j, 1], coords[j, 0]] += prob_dist[j]
+			else:
+				weight_k1 = get_cooccurred_object_weight(self.k2, k1)
+				# load GMM
+				if weight_k1 > 0:
+					locs, prob_dist = visualize_GMM_dist(weight_k1, inst['size'])
+					#print(f'locs.shape = {locs.shape}')
+					#=================== shift the probability grid centered at the object center ===============
+					locs[:, 1] += inst_pose[1]
+					locs[:, 0] += inst_pose[0]
+					coords = pose_to_coords_numpy(locs, self.pose_range, self.coords_range, flag_cropped=True)
+					# find coords in the range
+					mask_z = np.logical_and(coords[:, 1] >= 0, coords[:, 1] < self.H)
+					mask_x = np.logical_and(coords[:, 0] >= 0, coords[:, 0] < self.W)
+					mask_xz = np.logical_and.reduce((mask_z, mask_x))
+					locs = locs[mask_xz, :]
+					prob_dist = prob_dist[mask_xz]
+					coords = coords[mask_xz, :]
+					#print(f'later, coords.shape = {coords.shape}')
+					#print(f'weight.grid.shape = {weights.grid.shape}')
+					
+					for j in range(coords.shape[0]):
+						#print(f'coords[{j}]={coords[j]}')
+						weights.grid[coords[j, 1], coords[j, 0]] += prob_dist[j]
 				
 		#==================================== visualization ====================================
 		if True:
@@ -298,18 +320,19 @@ class ParticleFilter():
 			ax[0].scatter(x_coord_lst, z_coord_lst, s=30, c='white', zorder=2)
 			
 			dist_map = weights.grid
-			ax[1].imshow(dist_map, vmin=0., vmax=.001)
+			ax[1].imshow(dist_map, vmin=0.)
 			ax[1].get_xaxis().set_visible(False)
 			ax[1].get_yaxis().set_visible(False)
 			fig.tight_layout()
-			plt.title('dist_map distribution')
+			plt.title('dist_map distribution before ignoring explored area')
 			plt.show()
 
 		#================================== zero out weights on explored areas================================
 		mask_explored = np.logical_and(observed_area_flag, self.semantic_map != cat2idx_dict[self.k2])
-		mask_outside = (self.semantic_map == 0)
-		mask_zero_out = np.logical_or(mask_explored, mask_outside)
-		weights.grid[mask_zero_out] = 0.
+		#mask_unexplored = (self.semantic_map == 0)
+		#mask_zero_out = np.logical_or(mask_explored, mask_outside)
+		mask_zero_out = mask_explored
+		weights.grid[mask_explored] = 0.
 
 		weights.normalize()
 		#=================================== resample ================================
@@ -335,7 +358,7 @@ class ParticleFilter():
 			self.initializeUniformly()
 		else:
 			coords = weights.sample(self.numParticles)
-			new_particles = np.zeros((self.H, self.W))
+			new_particles = np.ones((self.H, self.W))
 			for j in range(coords.shape[0]):
 				new_particles[coords[j, 1], coords[j, 0]] += 1
 			
