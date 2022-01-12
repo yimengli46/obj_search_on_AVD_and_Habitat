@@ -35,10 +35,11 @@ semantic_map, pose_range, coords_range = read_map_npy(sem_map_npy)
 H, W = semantic_map.shape[:2]
 occ_map = np.load(f'output/semantic_map/{scene_name}/BEV_occupancy_map.npy', allow_pickle=True)
 
-#PF = ParticleFilter(H*W, occ_map, pose_range, coords_range)
-#dist_map = PF.visualizeBelief()
-#plt.imshow(dist_map, vmin=0., vmax=.3)
-#plt.show()
+PF = ParticleFilter(H*W, semantic_map, pose_range, coords_range)
+dist_map = PF.visualizeBelief()
+plt.imshow(dist_map, vmin=0., vmax=.3)
+plt.title('initial particle distribution')
+plt.show()
 
 sem_map = SemanticMap() # build the observed sem map
 traverse_lst = []
@@ -61,24 +62,25 @@ while step < NUM_STEPS:
 		#==================================== visualize the path on the map ==============================
 		observed_map = sem_map.get_semantic_map()
 
-		#PF.observeUpdate(observed_map)
-
-		#cropped_semantic_map = semantic_map[coords_range[1]:coords_range[3]+1, coords_range[0]:coords_range[2]+1]
 		color_semantic_map = apply_color_to_map(semantic_map)
 
 		observed_area_flag = (observed_map[coords_range[1]:coords_range[3]+1, coords_range[0]:coords_range[2]+1] > 0)
 		color_semantic_map = change_brightness(color_semantic_map, observed_area_flag, value=100)
 		#assert 1==2
 
+		'''
 		cut_observed_map = observed_map[coords_range[1]:coords_range[3]+1, coords_range[0]:coords_range[2]+1]
 		color_observed_map = apply_color_to_map(cut_observed_map)
+		'''
+
+		PF.observeUpdate(observed_area_flag)
 
 		#=================================== visualize the agent pose as red nodes =======================
 		x_coord_lst = []
 		z_coord_lst = []
 		for img_name in traverse_lst:
 			cur_pose = get_pose(img_name)
-			x_coord, z_coord = pose_to_coords(cur_pose, pose_range, coords_range, cell_size=.1)
+			x_coord, z_coord = pose_to_coords((cur_pose[0], -cur_pose[1]), pose_range, coords_range, cell_size=.1)
 			x_coord_lst.append(x_coord)
 			z_coord_lst.append(z_coord)
 
@@ -102,7 +104,13 @@ while step < NUM_STEPS:
 		#assert 1==2
 		'''
 
-		plt.imshow(color_semantic_map)
+		fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 100))
+		ax.imshow(color_semantic_map)
+		ax.get_xaxis().set_visible(False)
+		ax.get_yaxis().set_visible(False)
+		ax.scatter(x_coord_lst, z_coord_lst, s=30, c='red', zorder=2)
+		ax.plot(x_coord_lst, z_coord_lst, lw=5, c='blue', zorder=1)
+		fig.tight_layout()
 		plt.show()
 
 	#====================================== take next action ================================

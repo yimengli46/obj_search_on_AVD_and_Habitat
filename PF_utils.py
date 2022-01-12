@@ -9,34 +9,30 @@ from math import floor
 from sklearn.mixture import GaussianMixture
 from navigation_utils import change_brightness
 
-mode = '1d_distance'
+mode = 'semantic_prior'
 flag_visualize_ins_weights = True
 
-if mode == '1d_distance':
-	GMM_params_folder = 'output/GMM_obj_obj_1d_prior'
-elif mode == '2d_distance':
-	GMM_params_folder = 'output/GMM_obj_obj_2d_prior'
 
 cat2idx_dict = get_class_mapper()
 idx2cat_dict = {v: k for k, v in cat2idx_dict.items()}
+print(f'idx2cat = {idx2cat_dict}')
 
-# load the GMM params
-GMM_dict = {}
-for k1 in list(cat2idx_dict.keys()):
-	for k2 in list(cat2idx_dict.keys()):
-		try:
-			npy_file = np.load(f'{GMM_params_folder}/GMM_params_{k1}_{k2}.npy', allow_pickle=True)
-			params = npy_file.item()
-		except:
-			continue
-		gm = GaussianMixture(n_components=params['nComponents'])
-		gm.precisions_cholesky_ = np.linalg.cholesky(np.linalg.inv(params['covariances']))
-		gm.weights_ = params['weights']
-		gm.means_ = params['means']
-		gm.covariances_ = params['covariances']
-		GMM_dict[(k1, k2)] = gm
+#================================= load the weight prior =================
+weight_prior = np.load(f'output/semantic_prior/weight_prior.npy', allow_pickle=True).item()
 
 
+def get_cooccurred_object_weight(target_obj, relevant_obj):
+	if target_obj in weight_prior:
+		weights = weight_prior[target_obj]
+		for a, b in weights:
+			if a == relevant_obj:
+				return b
+	return 0.
+
+'''
+	Get initial legal positions from the grid.
+	Currently this function is never used.
+''' 
 def getLegalPositions(semantic_map, pose_range, coords_range):
 	H, W = semantic_map.shape[:2]
 	W_coords_range = range(0, W)
@@ -48,7 +44,7 @@ def getLegalPositions(semantic_map, pose_range, coords_range):
 	#print(f'xv.shape = {xv.shape}')
 	#print(f'yv.shape = {yv.shape}')
 	#print(f'coords.shape = {coords.shape}')
-	poses = pxl_coords_to_pose_numpy(coords, pose_range, coords_range, cell_size=.1, flag_cropped=False)
+	poses = pxl_coords_to_pose_numpy(coords, pose_range, coords_range, cell_size=.1, flag_cropped=True)
 	#print(f'poses.shape = {poses.shape}')
 	poses = list(map(tuple, poses))
 	return poses
@@ -61,7 +57,7 @@ def compute_centers(observed_semantic_map):
 	y = np.linspace(0, H-1, H)
 	xv, yv = np.meshgrid(x, y)
 	#====================================== compute centers of semantic classes =====================================
-	IGNORED_CLASS = [0, 1, 2, 17]
+	IGNORED_CLASS = [0]
 	cat_binary_map = observed_semantic_map.copy()
 	for cat in IGNORED_CLASS:
 		cat_binary_map = np.where(cat_binary_map==cat, -1, cat_binary_map)
@@ -70,7 +66,7 @@ def compute_centers(observed_semantic_map):
 
 	list_instances = []
 	for idx_ins in range(1, num_ins+1):
-		mask_ins = (instance_label==idx_ins)
+		mask_ins = (instance_label == idx_ins)
 		if np.sum(mask_ins) > 100: # should have at least 50 pixels
 			#print(f'idx_ins = {idx_ins}')
 			x_coords = xv[mask_ins]
@@ -78,32 +74,46 @@ def compute_centers(observed_semantic_map):
 			ins_center = (floor(np.median(x_coords)*.1), floor(np.median(y_coords)*.1))
 			ins_cat = observed_semantic_map[int(y_coords[0]), int(x_coords[0])]
 			ins = {}
-			ins['center'] = ins_center
+			ins['center'] = ins_center # in coordinates, rather than size
 			ins['cat'] = ins_cat
+
+			# compute object radius size
+			dist = np.sqrt((x_coords * .1 - ins_center[0])**2 + (y_coords * .1 - ins_center[1])**2)
+			size = np.max(dist)
+			ins['size'] = size * .1 # in meters, not coordinates
+
+			print(f'ins_center = {ins_center}, cat = {ins_cat}, class = {idx2cat_dict[ins_cat]}, size = {size}')
 			list_instances.append(ins)
 
 	return list_instances
 
-def visualize_GMM_dist(gm, h=600, w=600):
-	min_X = -w/2 * .1
-	max_X = w/2 * .1
-	min_Z = -h/2 * .1
-	max_Z = h/2 * .1
+'''
+size is the distance from the center to the boundary of the object
+weight is the frequency weight between obj1 and target obj
+'''
+def visualize_GMM_dist(weight=1., size=1.):
+	radius = size + 1.
+	min_X = -radius
+	max_X = radius
+	min_Z = -radius
+	max_Z = radius
 	x_grid = np.arange(min_X, max_X, 0.1)
 	z_grid = np.arange(min_Z, max_Z, 0.1)
 	xv, yv = np.meshgrid(x_grid, z_grid)
+	h, w = xv.shape
 	xv = xv.flatten()
 	yv = yv.flatten()
 	locs = np.stack((yv, xv), axis=1)
 	dists = np.sqrt(locs[:, 0]**2 + locs[:, 1]**2)
 	dists = dists.reshape(-1, 1)
-	logprob = gm.score_samples(dists)
-	pdf = np.exp(logprob)
+	pdf = np.ones(dists.shape) / dists.shape[0]
+	pdf[dists <= size] = 0.
+	pdf[dists > radius] = 0.
 	pdf = pdf / np.sum(pdf) #normalize it
 	# prob_dist
 	if False:
 		prob_dist = pdf.reshape((h, w))
-		plt.imshow(prob_dist, vmin=.0, vmax=.2)
+		plt.imshow(prob_dist)#, vmin=.0, vmax=.2)
 		plt.show()
 	locs_XZ = np.zeros(locs.shape)
 	locs_XZ[:, 0] = locs[:, 1] # x
@@ -114,7 +124,7 @@ class DiscreteDistribution_grid(object):
 	def __init__(self, H, W):
 		self.H = H
 		self.W = W
-		self.grid = np.ones((self.H, self.W))
+		self.grid = np.zeros((self.H, self.W))
 
 	def __getitem__(self, key):
 		return self.grid[key[1], key[0]]
@@ -182,7 +192,7 @@ class ParticleFilter():
 	A particle filter for approximately tracking a single ghost.
 	"""
 	def __init__(self, numParticles, semantic_map, pose_range, coords_range):
-		self.k2 = 'sofa'
+		self.k2 = 'refrigerator'
 		self.H, self.W = semantic_map.shape[:2]
 		self.setNumParticles(numParticles)
 		self.semantic_map = semantic_map
@@ -205,7 +215,7 @@ class ParticleFilter():
 		"""
 		self.particles = np.ones((self.H, self.W))
 
-	def observeUpdate(self, observed_map):
+	def observeUpdate(self, observed_area_flag):
 		"""
 		Update beliefs based on the distance observation and Pacman's position.
 
@@ -221,9 +231,8 @@ class ParticleFilter():
 		weights = DiscreteDistribution_grid(self.H, self.W)
 
 		#=================================== observe =================================
-		flag_observed_map = (observed_map > 0)
 		semantic_map = self.semantic_map.copy()
-		semantic_map[flag_observed_map == 0] = 0
+		semantic_map[observed_area_flag == False] = 0
 		color_semantic_map = apply_color_to_map(semantic_map)
 		#plt.imshow(color_semantic_map)
 		#plt.show()
@@ -231,9 +240,9 @@ class ParticleFilter():
 		list_instances = compute_centers(semantic_map)
 		print(f'num_instances = {len(list_instances)}')
 
-		# visualize the instance centers
-		'''
-		fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 100))
+		#=============================== visualize detected instance centers ======================
+		#'''
+		fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 120))
 		ax.imshow(color_semantic_map)
 		ax.get_xaxis().set_visible(False)
 		ax.get_yaxis().set_visible(False)
@@ -241,65 +250,63 @@ class ParticleFilter():
 		z_coord_lst = []
 		for idx, inst in enumerate(list_instances):
 			inst_coords = inst['center']
-			inst_pose = pxl_coords_to_pose(inst_coords, self.pose_range, self.coords_range, flag_cropped=False)
-			inst_coords = pose_to_coords(inst_pose, self.pose_range, self.coords_range, flag_cropped=False)
 			x_coord_lst.append(inst_coords[0])
 			z_coord_lst.append(inst_coords[1])
-		ax.scatter(x_coord_lst, z_coord_lst, s=30, c='blue', zorder=2)
+		ax.scatter(x_coord_lst, z_coord_lst, s=30, c='white', zorder=2)
 		fig.tight_layout()
+		plt.title('visualize detected instance centers')
 		plt.show()
-		assert 1==2
-		'''
+		#assert 1==2
+		#'''
 
+		#========================================= Compute Priors ===========================================
 		for idx, inst in enumerate(list_instances):
-			inst_pose = pxl_coords_to_pose(inst['center'], self.pose_range, self.coords_range, flag_cropped=False)
+			inst_pose = pxl_coords_to_pose(inst['center'], self.pose_range, self.coords_range, flag_cropped=True)
 			k1 = idx2cat_dict[inst['cat']]
+			weight_k1 = get_cooccurred_object_weight(self.k2, k1)
 			# load GMM
-			if (k1, self.k2) in GMM_dict:
-				gm = GMM_dict[(k1, self.k2)]
-				locs, prob_dist = visualize_GMM_dist(gm)
+			if weight_k1 > 0:
+				locs, prob_dist = visualize_GMM_dist(weight_k1, inst['size'])
 				#print(f'locs.shape = {locs.shape}')
-				n_locs = locs.shape[0]
+				#=================== shift the probability grid centered at the object center ===============
 				locs[:, 1] += inst_pose[1]
 				locs[:, 0] += inst_pose[0]
-				mask_Z = np.logical_and(locs[:, 1] > self.pose_range[1], locs[:, 1] < self.pose_range[3]) 
-				mask_X = np.logical_and(locs[:, 0] > self.pose_range[0], locs[:, 0] < self.pose_range[2])
-				mask_XZ = np.logical_and.reduce((mask_Z, mask_X))
-				locs = locs[mask_XZ, :]
-				prob_dist = prob_dist[mask_XZ]
-				#print(f'later, locs.shape = {locs.shape}')
-				coords = pose_to_coords_numpy(locs, self.pose_range, self.coords_range, flag_cropped=False)
-				for j in range(coords.shape[0]):
-					weights.grid[coords[j, 1], coords[j, 0]] *= prob_dist[j] + 0.00001
+				coords = pose_to_coords_numpy(locs, self.pose_range, self.coords_range, flag_cropped=True)
+				# find coords in the range
+				mask_z = np.logical_and(coords[:, 1] >= 0, coords[:, 1] < self.H)
+				mask_x = np.logical_and(coords[:, 0] >= 0, coords[:, 0] < self.W)
+				mask_xz = np.logical_and.reduce((mask_z, mask_x))
+				locs = locs[mask_xz, :]
+				prob_dist = prob_dist[mask_xz]
+				coords = coords[mask_xz, :]
+				#print(f'later, coords.shape = {coords.shape}')
+				#print(f'weight.grid.shape = {weights.grid.shape}')
 				
-				if False:
-					color_semantic_map = apply_color_to_map(semantic_map)
-					observed_area_flag = (observed_map > 0)
-					color_semantic_map = change_brightness(color_semantic_map, observed_area_flag, value=100)
+				for j in range(coords.shape[0]):
+					#print(f'coords[{j}]={coords[j]}')
+					weights.grid[coords[j, 1], coords[j, 0]] += prob_dist[j]
+				
+		#==================================== visualization ====================================
+		if True:
+			color_semantic_map = apply_color_to_map(semantic_map)
+			color_semantic_map = change_brightness(color_semantic_map, observed_area_flag, value=100)
 
-					fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(200, 60))
-					color_semantic_map = color_semantic_map[self.coords_range[1]:self.coords_range[3]+1, self.coords_range[0]:self.coords_range[2]+1]
-					ax[0].imshow(color_semantic_map)
-					#ax[0].get_xaxis().set_visible(False)
-					#ax[0].get_yaxis().set_visible(False)
-					x_coord_lst = []
-					z_coord_lst = []
-					#for inst in list_instances:
-					inst_coords = inst['center']
-					x_coord_lst.append(inst_coords[0] - self.coords_range[0])
-					z_coord_lst.append(inst_coords[1] - self.coords_range[1])
-					ax[0].scatter(x_coord_lst, z_coord_lst, s=30, c='yellow', zorder=2)
-					
-					dist_map = weights.grid[self.coords_range[1]:self.coords_range[3]+1, self.coords_range[0]:self.coords_range[2]+1]
-					#dist_map = weights.grid
-					ax[1].imshow(dist_map, vmin=0., vmax=.2)
-					#ax[1].get_xaxis().set_visible(False)
-					#ax[1].get_yaxis().set_visible(False)
-					fig.tight_layout()
-					plt.show()
+			fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(200, 90))
+			ax[0].imshow(color_semantic_map)
+			ax[0].get_xaxis().set_visible(False)
+			ax[0].get_yaxis().set_visible(False)
+			ax[0].scatter(x_coord_lst, z_coord_lst, s=30, c='white', zorder=2)
+			
+			dist_map = weights.grid
+			ax[1].imshow(dist_map, vmin=0., vmax=.001)
+			ax[1].get_xaxis().set_visible(False)
+			ax[1].get_yaxis().set_visible(False)
+			fig.tight_layout()
+			plt.title('dist_map distribution')
+			plt.show()
 
 		#================================== zero out weights on explored areas================================
-		mask_explored = np.logical_and(flag_observed_map, self.semantic_map != cat2idx_dict[self.k2])
+		mask_explored = np.logical_and(observed_area_flag, self.semantic_map != cat2idx_dict[self.k2])
 		mask_outside = (self.semantic_map == 0)
 		mask_zero_out = np.logical_or(mask_explored, mask_outside)
 		weights.grid[mask_zero_out] = 0.
@@ -308,32 +315,20 @@ class ParticleFilter():
 		#=================================== resample ================================
 		if flag_visualize_ins_weights:
 			color_semantic_map = apply_color_to_map(semantic_map)
-			observed_area_flag = (observed_map > 0)
 			color_semantic_map = change_brightness(color_semantic_map, observed_area_flag, value=100)
 
-			fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(200, 200))
-			color_semantic_map = color_semantic_map[self.coords_range[1]:self.coords_range[3]+1, self.coords_range[0]:self.coords_range[2]+1]
-			print(f'color_semantic_map.shape = {color_semantic_map.shape}')
-			ax.imshow(color_semantic_map)
-			#ax[0].get_xaxis().set_visible(False)
-			#ax[0].get_yaxis().set_visible(False)
-			x_coord_lst = []
-			z_coord_lst = []
-			for inst in list_instances:
-				inst_coords = inst['center']
-				x_coord_lst.append(inst_coords[0] - self.coords_range[0])
-				z_coord_lst.append(inst_coords[1] - self.coords_range[1])
-			ax.scatter(x_coord_lst, z_coord_lst, s=30, c='yellow', zorder=2)
-			fig.tight_layout()
-			plt.show()
+			fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(200, 90))
+			ax[0].imshow(color_semantic_map)
+			ax[0].get_xaxis().set_visible(False)
+			ax[0].get_yaxis().set_visible(False)
+			ax[0].scatter(x_coord_lst, z_coord_lst, s=30, c='white', zorder=2)
 			
-			fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(200, 200))
-			dist_map = weights.grid[self.coords_range[1]:self.coords_range[3]+1, self.coords_range[0]:self.coords_range[2]+1]
-			#dist_map = weights.grid
-			ax.imshow(dist_map, vmin=0.)
-			#ax[1].get_xaxis().set_visible(False)
-			#ax[1].get_yaxis().set_visible(False)
+			dist_map = weights.grid
+			ax[1].imshow(dist_map, vmin=0.)
+			ax[1].get_xaxis().set_visible(False)
+			ax[1].get_yaxis().set_visible(False)
 			fig.tight_layout()
+			plt.title('probability map after weight normalization ...')
 			plt.show()
 
 		if weights.total() == 0: # corner case
@@ -346,8 +341,9 @@ class ParticleFilter():
 			
 			self.particles = new_particles
 			plt.imshow(self.particles, vmin=0.0)
-			#plt.show()
-			plt.close()
+			plt.title('particles')
+			plt.show()
+			#plt.close()
 
 	'''
 	def getBeliefDistribution(self):

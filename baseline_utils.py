@@ -262,13 +262,16 @@ def semanticMap_to_binary(sem_map):
   sem_map[sem_map == 2] = 255
   return sem_map
 
-def get_class_mapper():
+def get_class_mapper(dataset='gibson'):
   class_dict = {}
-  categories = ['void', 'wall', 'floor','chair','door','table','picture','cabinet','cushion','window','sofa','bed', \
-    'curtain','chest_of_drawers','plant','sink','stairs','ceiling','toilet','stool','towel','mirror','tv_monitor', \
-    'shower','column','bathtub','counter','fireplace','lighting','beam','railing','shelving','blinds','gym_equipment', \
-    'seating','board_panel','furniture','appliances','clothes','objects','misc']
-  class_dict = {v: k for k, v in enumerate(categories)}
+  if dataset == 'mp3d':
+    categories = ['void', 'wall', 'floor','chair','door','table','picture','cabinet','cushion','window','sofa','bed', \
+      'curtain','chest_of_drawers','plant','sink','stairs','ceiling','toilet','stool','towel','mirror','tv_monitor', \
+      'shower','column','bathtub','counter','fireplace','lighting','beam','railing','shelving','blinds','gym_equipment', \
+      'seating','board_panel','furniture','appliances','clothes','objects','misc']
+  elif dataset == 'gibson':
+    categories = list(np.load(f'output/semantic_prior/all_objs_list.npy', allow_pickle=True))
+  class_dict = {v: k+1 for k, v in enumerate(categories)}
   return class_dict
 
 def pxl_coords_to_pose(coords, pose_range, coords_range, cell_size=0.1, flag_cropped=True):
