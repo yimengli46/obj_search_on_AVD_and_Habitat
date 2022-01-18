@@ -10,7 +10,7 @@ import random
 from navigation_utils import get_obs, random_move, get_obs_panor, read_map_npy, get_pose, change_brightness
 from baseline_utils import apply_color_to_map, pose_to_coords
 from map_utils import SemanticMap
-from PF_utils import ParticleFilter
+from PF_continuous_utils import ParticleFilter
 
 dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
 scene_name = 'Allensville_0'
@@ -35,11 +35,12 @@ semantic_map, pose_range, coords_range = read_map_npy(sem_map_npy)
 H, W = semantic_map.shape[:2]
 occ_map = np.load(f'output/semantic_map/{scene_name}/BEV_occupancy_map.npy', allow_pickle=True)
 
-PF = ParticleFilter(H*W, semantic_map.copy(), pose_range, coords_range)
+PF = ParticleFilter(10000, semantic_map.copy(), pose_range, coords_range)
 dist_map = PF.visualizeBelief()
 plt.imshow(dist_map, vmin=0., vmax=.3)
 plt.title('initial particle distribution')
 plt.show()
+assert 1==2
 
 sem_map = SemanticMap() # build the observed sem map
 traverse_lst = []
