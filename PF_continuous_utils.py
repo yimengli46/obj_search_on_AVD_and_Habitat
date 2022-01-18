@@ -11,7 +11,7 @@ from navigation_utils import change_brightness
 
 mode = 'semantic_prior'
 flag_visualize_ins_weights = True
-
+flag_visualize_peaks = True
 
 cat2idx_dict = get_class_mapper()
 idx2cat_dict = {v: k for k, v in cat2idx_dict.items()}
@@ -94,6 +94,22 @@ def visualize_GMM_dist(weight, size, inst_pose, particles, particle_weights, fla
 			particle_weights[particle] += P_e_X
 		else:
 			particle_weights[particle] = P_e_X
+
+def confirm_nComponents(X):
+	bics = []
+	min_bic = 0
+	counter = 1
+	maximum_nComponents = min(len(X), 10)
+	for i in range (1, maximum_nComponents): # test the AIC/BIC metric between 1 and 10 components
+		gmm = GaussianMixture(n_components=counter, max_iter=1000, random_state=0, covariance_type = 'full').fit(X)
+		bic = gmm.bic(X)
+		bics.append(bic)
+		if bic < min_bic or min_bic == 0:
+			min_bic = bic
+			opt_bic = counter
+
+		counter += 1
+	return opt_bic
 
 class DiscreteDistribution(dict):
 	"""
@@ -328,14 +344,23 @@ class ParticleFilter():
 			poses = weights.sample(self.numParticles)
 			print(f'len(poses) = {len(poses)}')
 			self.particles = poses
-		
+
+		#===================================== finding the peak ================================
+		gm = self.find_peak()
+		peaks = gm.means_
+		peaks_coords = pose_to_coords_numpy(peaks, self.pose_range, self.coords_range)
 		#===================================== visualize particles =============================
 		dist_map = self.visualizeBelief()
 		print(f'sum dist_map = {np.sum(dist_map)}')
-		plt.imshow(dist_map, vmin=0.0)
-		plt.title('particles')
+
+		fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 120))
+		ax.imshow(dist_map)
+		ax.get_xaxis().set_visible(False)
+		ax.get_yaxis().set_visible(False)
+		ax.scatter(peaks_coords[:, 0], peaks_coords[:, 1], s=30, c='white', zorder=2)
+		#fig.tight_layout()
+		plt.title('particles (white nodes are peaks of Gaussian component)')
 		plt.show()
-		#plt.close()
 
 	def visualizeBelief(self):
 		dist_map = np.zeros((self.H, self.W))
@@ -352,3 +377,12 @@ class ParticleFilter():
 			coords = pose_to_coords(k, self.pose_range, self.coords_range)
 			dist_map[coords[1], coords[0]] = weights[k]
 		return dist_map
+
+	def find_peak(self):
+		np_particles = np.array(self.particles)
+		num_GMM_components = confirm_nComponents(np_particles)
+		gm = GaussianMixture(n_components=num_GMM_components).fit(np_particles)
+		print(f'gm.weights = {gm.weights_}')
+		#print(f'gm.means = {gm.means_}')
+		#print(f'gm.covariances = {gm.covariances_}')
+		return gm
