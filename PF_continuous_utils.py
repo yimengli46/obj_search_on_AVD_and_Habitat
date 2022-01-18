@@ -77,19 +77,23 @@ def visualize_GMM_dist(weight, size, inst_pose, particles, particle_weights, fla
 	for particle in particles:
 		particle_x, particle_z = particle
 		dist = sqrt((particle_x - inst_pose[0])**2 + (particle_z - inst_pose[1])**2)
-		P_e_X = 0.
+		P_e_X = 1.
 
 		if not flag_target:
 			if dist <= radius and dist >= size:
-				P_e_X = 0.5
+				P_e_X *= 0.5
+			else:
+				P_e_X *= .1
 		else:
 			if dist <= size:
-				P_e_X = 1.
+				P_e_X *= 10.
+			else:
+				P_e_X *= .1
 
 		if particle in particle_weights:
 			particle_weights[particle] += P_e_X
 		else:
-			particle_weightsp[particle] = P_e_X
+			particle_weights[particle] = P_e_X
 
 class DiscreteDistribution(dict):
 	"""
@@ -152,7 +156,7 @@ class DiscreteDistribution(dict):
 			for k, v in self.items():
 				self[k] = v / total
 
-	def sample(self):
+	def sample(self, num_samples=1):
 		"""
 		Draw a random sample from the distribution and return the key, weighted
 		by the values associated with each key.
@@ -176,7 +180,7 @@ class DiscreteDistribution(dict):
 		"*** YOUR CODE HERE ***"
 		population = list(self.keys())
 		weights = list(self.values())
-		return random.choices(population, weights=weights)[0]
+		return random.choices(population, weights=weights, k=num_samples)
 
 
 
@@ -208,8 +212,9 @@ class ParticleFilter():
 		Z = np.random.uniform(min_Z, max_Z, size=self.numParticles)
 		X = np.round(X, decimals=2).reshape(-1, 1) # 10000 x 1
 		Z = np.round(Z, decimals=2).reshape(-1, 1) # 10000 x 1
-		self.particles = np.hstack((X, Z)) # 10000 x 2
-		#print(f'particles.shape = {self.particles.shape}')
+		particles = np.hstack((X, Z)) # 10000 x 2
+		#print(f'particles.shape = {particles.shape}')
+		self.particles = list(map(tuple, particles))
 
 	def observeUpdate(self, observed_area_flag):
 		"""
@@ -268,7 +273,7 @@ class ParticleFilter():
 				# load GMM
 				if weight_k1 > 0:
 					visualize_GMM_dist(weight_k1, inst['size'], inst_pose, self.particles, weights)
-				
+
 		#==================================== visualization ====================================
 		if True:
 			color_semantic_map = apply_color_to_map(semantic_map)
@@ -280,22 +285,24 @@ class ParticleFilter():
 			ax[0].get_yaxis().set_visible(False)
 			ax[0].scatter(x_coord_lst, z_coord_lst, s=30, c='white', zorder=2)
 			
-			dist_map = weights.grid
+			dist_map = self.visualizeWeights(weights)
 			ax[1].imshow(dist_map, vmin=0.)
 			ax[1].get_xaxis().set_visible(False)
 			ax[1].get_yaxis().set_visible(False)
 			#fig.tight_layout()
-			plt.title('dist_map distribution before ignoring explored area')
+			plt.title('particle weights distribution before ignoring explored area')
 			plt.show()
 
 		#================================== zero out weights on explored areas================================
 		mask_explored = np.logical_and(observed_area_flag, self.semantic_map != cat2idx_dict[self.k2])
-		#mask_unexplored = (self.semantic_map == 0)
-		#mask_zero_out = np.logical_or(mask_explored, mask_outside)
 		mask_zero_out = mask_explored
-		weights.grid[mask_explored] = 0.
+		for k in weights:
+			coords = pose_to_coords(k, self.pose_range, self.coords_range, flag_cropped=True)
+			if mask_zero_out[coords[1], coords[0]] == 1:
+				weights[k] = 0.
 
 		weights.normalize()
+
 		#=================================== resample ================================
 		if flag_visualize_ins_weights:
 			color_semantic_map = apply_color_to_map(semantic_map)
@@ -307,48 +314,41 @@ class ParticleFilter():
 			ax[0].get_yaxis().set_visible(False)
 			ax[0].scatter(x_coord_lst, z_coord_lst, s=30, c='white', zorder=2)
 			
-			dist_map = weights.grid
+			dist_map = self.visualizeWeights(weights)
 			ax[1].imshow(dist_map, vmin=0.)
 			ax[1].get_xaxis().set_visible(False)
 			ax[1].get_yaxis().set_visible(False)
 			#fig.tight_layout()
-			plt.title('probability map after weight normalization ...')
+			plt.title('particle weights distribution after weight normalization')
 			plt.show()
 
 		if weights.total() == 0: # corner case
 			self.initializeUniformly()
 		else:
-			coords = weights.sample(self.numParticles)
-			new_particles = np.ones((self.H, self.W))
-			for j in range(coords.shape[0]):
-				new_particles[coords[j, 1], coords[j, 0]] += 1
-			
-			self.particles = new_particles
-			plt.imshow(self.particles, vmin=0.0)
-			plt.title('particles')
-			plt.show()
-			#plt.close()
-
-	'''
-	def getBeliefDistribution(self):
-		"""
-		Return the agent's current belief state, a distribution over ghost
-		locations conditioned on all evidence and time passage. This method
-		essentially converts a list of particles into a belief distribution.
+			poses = weights.sample(self.numParticles)
+			print(f'len(poses) = {len(poses)}')
+			self.particles = poses
 		
-		This function should return a normalized distribution.
-		"""
-
-		particle_distribution = DiscreteDistribution_grid(self.H, self.W)
-		particle_distribution.grid = self.particles.copy()
-		particle_distribution.normalize()
-		
-		return particle_distribution
-	'''
+		#===================================== visualize particles =============================
+		dist_map = self.visualizeBelief()
+		print(f'sum dist_map = {np.sum(dist_map)}')
+		plt.imshow(dist_map, vmin=0.0)
+		plt.title('particles')
+		plt.show()
+		#plt.close()
 
 	def visualizeBelief(self):
 		dist_map = np.zeros((self.H, self.W))
-		coords = pose_to_coords_numpy(self.particles, self.pose_range, self.coords_range)
-		dist_map[coords[:, 1], coords[:, 0]] += 1
+		particles = np.array(self.particles)
+		coords = pose_to_coords_numpy(particles, self.pose_range, self.coords_range)
+		tuple_coords = list(map(tuple, coords))
+		for coord in tuple_coords:
+			dist_map[coord[1], coord[0]] += 1
+		return dist_map
 
+	def visualizeWeights(self, weights):
+		dist_map = np.zeros((self.H, self.W))
+		for k in weights:
+			coords = pose_to_coords(k, self.pose_range, self.coords_range)
+			dist_map[coords[1], coords[0]] = weights[k]
 		return dist_map

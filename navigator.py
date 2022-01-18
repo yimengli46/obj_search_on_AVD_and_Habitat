@@ -37,10 +37,10 @@ occ_map = np.load(f'output/semantic_map/{scene_name}/BEV_occupancy_map.npy', all
 
 PF = ParticleFilter(10000, semantic_map.copy(), pose_range, coords_range)
 dist_map = PF.visualizeBelief()
-plt.imshow(dist_map, vmin=0., vmax=.3)
+plt.imshow(dist_map, vmin=0.)
 plt.title('initial particle distribution')
 plt.show()
-assert 1==2
+
 
 sem_map = SemanticMap() # build the observed sem map
 traverse_lst = []
