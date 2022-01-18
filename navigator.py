@@ -64,15 +64,27 @@ while step < NUM_STEPS:
 
 
 		observed_area_flag = (observed_area_flag[coords_range[1]:coords_range[3]+1, coords_range[0]:coords_range[2]+1])
+		## for the explored free space visualization
 		mask_observed_and_non_obj = np.logical_and(observed_area_flag, semantic_map == 0)
 		semantic_map[mask_observed_and_non_obj] = 40
+
 		color_semantic_map = apply_color_to_map(semantic_map)
-		color_semantic_map = change_brightness(color_semantic_map, observed_area_flag, value=100)
+		color_semantic_map = change_brightness(color_semantic_map, observed_area_flag, value=60)
+
 		#assert 1==2
 
 		'''
 		cut_observed_map = observed_map[coords_range[1]:coords_range[3]+1, coords_range[0]:coords_range[2]+1]
 		color_observed_map = apply_color_to_map(cut_observed_map)
+		'''
+		'''
+		fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 120))
+		ax.imshow(color_semantic_map)
+		ax.get_xaxis().set_visible(False)
+		ax.get_yaxis().set_visible(False)
+		fig.tight_layout()
+		plt.title('observed area')
+		plt.show()
 		'''
 
 		PF.observeUpdate(observed_area_flag)
@@ -112,7 +124,8 @@ while step < NUM_STEPS:
 		ax.get_yaxis().set_visible(False)
 		ax.scatter(x_coord_lst, z_coord_lst, s=30, c='red', zorder=2)
 		ax.plot(x_coord_lst, z_coord_lst, lw=5, c='blue', zorder=1)
-		fig.tight_layout()
+		#fig.tight_layout()
+		plt.title('observed area')
 		plt.show()
 
 	#====================================== take next action ================================

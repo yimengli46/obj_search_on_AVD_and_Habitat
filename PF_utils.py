@@ -91,7 +91,7 @@ def compute_centers(observed_semantic_map):
 size is the distance from the center to the boundary of the object
 weight is the frequency weight between obj1 and target obj
 '''
-def visualize_GMM_dist(weight=1., size=1.):
+def visualize_GMM_dist(weight=1., size=1., flag_target=False):
 	radius = size + 1.
 	min_X = -radius
 	max_X = radius
@@ -107,8 +107,11 @@ def visualize_GMM_dist(weight=1., size=1.):
 	dists = np.sqrt(locs[:, 0]**2 + locs[:, 1]**2)
 	dists = dists.reshape(-1, 1)
 	pdf = np.ones(dists.shape) #/ dists.shape[0]
-	pdf[dists <= size] = 0.
-	pdf[dists > radius] = 0.
+	if not flag_target: # detected obj is not target obj
+		pdf[dists <= size] = 0.
+		pdf[dists > radius] = 0.
+	else:
+		pdf[dists > size] = 0.
 	#pdf = pdf / np.sum(pdf) #normalize it
 	# prob_dist
 	if False:
@@ -255,7 +258,7 @@ class ParticleFilter():
 			x_coord_lst.append(inst_coords[0])
 			z_coord_lst.append(inst_coords[1])
 		ax.scatter(x_coord_lst, z_coord_lst, s=30, c='white', zorder=2)
-		fig.tight_layout()
+		#fig.tight_layout()
 		plt.title('visualize detected instance centers')
 		plt.show()
 		#assert 1==2
@@ -266,7 +269,7 @@ class ParticleFilter():
 			inst_pose = pxl_coords_to_pose(inst['center'], self.pose_range, self.coords_range, flag_cropped=True)
 			k1 = idx2cat_dict[inst['cat']]
 			if k1 == self.k2: # target object is detected
-				locs, prob_dist = visualize_GMM_dist(weight_k1, inst['size'])
+				locs, prob_dist = visualize_GMM_dist(weight_k1, inst['size'], flag_target=True)
 				prob_dist *= 10000
 				locs[:, 1] += inst_pose[1]
 				locs[:, 0] += inst_pose[0]
@@ -311,7 +314,7 @@ class ParticleFilter():
 		#==================================== visualization ====================================
 		if True:
 			color_semantic_map = apply_color_to_map(semantic_map)
-			color_semantic_map = change_brightness(color_semantic_map, observed_area_flag, value=100)
+			color_semantic_map = change_brightness(color_semantic_map, observed_area_flag, value=60)
 
 			fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(200, 90))
 			ax[0].imshow(color_semantic_map)
@@ -323,7 +326,7 @@ class ParticleFilter():
 			ax[1].imshow(dist_map, vmin=0.)
 			ax[1].get_xaxis().set_visible(False)
 			ax[1].get_yaxis().set_visible(False)
-			fig.tight_layout()
+			#fig.tight_layout()
 			plt.title('dist_map distribution before ignoring explored area')
 			plt.show()
 
@@ -338,7 +341,7 @@ class ParticleFilter():
 		#=================================== resample ================================
 		if flag_visualize_ins_weights:
 			color_semantic_map = apply_color_to_map(semantic_map)
-			color_semantic_map = change_brightness(color_semantic_map, observed_area_flag, value=100)
+			color_semantic_map = change_brightness(color_semantic_map, observed_area_flag, value=60)
 
 			fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(200, 90))
 			ax[0].imshow(color_semantic_map)
@@ -350,7 +353,7 @@ class ParticleFilter():
 			ax[1].imshow(dist_map, vmin=0.)
 			ax[1].get_xaxis().set_visible(False)
 			ax[1].get_yaxis().set_visible(False)
-			fig.tight_layout()
+			#fig.tight_layout()
 			plt.title('probability map after weight normalization ...')
 			plt.show()
 
