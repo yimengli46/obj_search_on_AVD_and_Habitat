@@ -325,6 +325,30 @@ def pose_to_coords_numpy(cur_pose, pose_range, coords_range, cell_size=0.1, flag
   coords = coords.astype(int)
   return coords
 
+def pose_to_coords_frame(cur_pose, pose_range, coords_range, cell_size=0.1, flag_cropped=True):
+  tx, tz = cur_pose[:2]
+    
+  if flag_cropped:
+    x_coord = (tx - pose_range[0]) / cell_size - coords_range[0]
+    z_coord = (tz - pose_range[1]) / cell_size - coords_range[1]
+  else:
+    x_coord = (tx - pose_range[0]) / cell_size
+    z_coord = (tz - pose_range[1]) / cell_size
+
+  return (x_coord, z_coord)
+
+# for particle visualization only
+def pose_to_coords_frame_numpy(cur_pose, pose_range, coords_range, cell_size=0.1, flag_cropped=True):    
+  coords = np.zeros(cur_pose.shape)
+  if flag_cropped:
+    coords[:, 0] = (cur_pose[:, 0] - pose_range[0]) / cell_size - coords_range[0]
+    coords[:, 1] = (cur_pose[:, 1] - pose_range[1]) / cell_size - coords_range[1]
+  else:
+    coords[:, 0] = (cur_pose[:, 0] - pose_range[0]) / cell_size
+    coords[:, 1] = (cur_pose[:, 1] - pose_range[1]) / cell_size
+
+  return coords
+
 def save_fig_through_plt(img, name):
   fig, ax = plt.subplots(nrows=1, ncols=1)
   ax.imshow(img)

@@ -2,7 +2,7 @@ import itertools
 import random
 import numpy as np
 import matplotlib.pyplot as plt
-from baseline_utils import pxl_coords_to_pose_numpy, pose_to_coords, get_class_mapper, pxl_coords_to_pose, pose_to_coords_numpy, apply_color_to_map
+from baseline_utils import pxl_coords_to_pose_numpy, pose_to_coords, get_class_mapper, pxl_coords_to_pose, pose_to_coords_numpy, apply_color_to_map, pose_to_coords_frame_numpy, pose_to_coords_frame
 import skimage.measure
 import cv2
 from math import floor, sqrt
@@ -301,12 +301,11 @@ class ParticleFilter():
 			ax[0].get_yaxis().set_visible(False)
 			ax[0].scatter(x_coord_lst, z_coord_lst, s=30, c='white', zorder=2)
 			
-			dist_map = self.visualizeWeights(weights)
-			ax[1].imshow(dist_map, vmin=0.)
+			dist_map = self.visualizeWeights(weights, ax[1])
 			ax[1].get_xaxis().set_visible(False)
 			ax[1].get_yaxis().set_visible(False)
 			#fig.tight_layout()
-			plt.title('particle weights distribution before ignoring explored area')
+			plt.title('particle weights before ignoring explored area (color denotes weight)')
 			plt.show()
 
 		#================================== zero out weights on explored areas================================
@@ -315,7 +314,7 @@ class ParticleFilter():
 		for k in weights:
 			coords = pose_to_coords(k, self.pose_range, self.coords_range, flag_cropped=True)
 			if mask_zero_out[coords[1], coords[0]] == 1:
-				weights[k] = 0.
+				weights[k] *= 1e-5
 
 		weights.normalize()
 
@@ -330,12 +329,11 @@ class ParticleFilter():
 			ax[0].get_yaxis().set_visible(False)
 			ax[0].scatter(x_coord_lst, z_coord_lst, s=30, c='white', zorder=2)
 			
-			dist_map = self.visualizeWeights(weights)
-			ax[1].imshow(dist_map, vmin=0.)
+			dist_map = self.visualizeWeights(weights, ax[1])
 			ax[1].get_xaxis().set_visible(False)
 			ax[1].get_yaxis().set_visible(False)
 			#fig.tight_layout()
-			plt.title('particle weights distribution after weight normalization')
+			plt.title('particle weights after weight normalization (color denotes weight)')
 			plt.show()
 
 		if weights.total() == 0: # corner case
@@ -349,40 +347,45 @@ class ParticleFilter():
 		gm = self.find_peak()
 		peaks = gm.means_
 		peaks_coords = pose_to_coords_numpy(peaks, self.pose_range, self.coords_range)
-		#===================================== visualize particles =============================
-		dist_map = self.visualizeBelief()
-		print(f'sum dist_map = {np.sum(dist_map)}')
-
+		
+		#===================================== visualize particles and the peak =============================
 		fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 120))
-		ax.imshow(dist_map)
 		ax.get_xaxis().set_visible(False)
 		ax.get_yaxis().set_visible(False)
-		ax.scatter(peaks_coords[:, 0], peaks_coords[:, 1], s=30, c='white', zorder=2)
+		self.visualizeBelief(ax)
+		ax.scatter(peaks_coords[:, 0], peaks_coords[:, 1], s=30, c='white', zorder=3)
 		#fig.tight_layout()
-		plt.title('particles (white nodes are peaks of Gaussian component)')
+		plt.title('particles (white nodes are peaks of Gaussian components)')
 		plt.show()
 
-	def visualizeBelief(self):
+	def visualizeBelief(self, ax):
+		# visualize the background
 		dist_map = np.zeros((self.H, self.W))
+		ax.imshow(dist_map)
+		# visualize the particles
 		particles = np.array(self.particles)
-		coords = pose_to_coords_numpy(particles, self.pose_range, self.coords_range)
-		tuple_coords = list(map(tuple, coords))
-		for coord in tuple_coords:
-			dist_map[coord[1], coord[0]] += 1
-		return dist_map
+		poses = pose_to_coords_frame_numpy(particles, self.pose_range, self.coords_range)
+		ax.scatter(poses[:, 0], poses[:, 1], s=5, c='red', zorder=2)
 
-	def visualizeWeights(self, weights):
+	def visualizeWeights(self, weights, ax):
+		# visualize the background
 		dist_map = np.zeros((self.H, self.W))
+		ax.imshow(dist_map)
+		# visualize the particles and their weights
+		particles = np.array(weights.keys())
+		X_lst, Z_lst, val_lst = [], [], []
 		for k in weights:
-			coords = pose_to_coords(k, self.pose_range, self.coords_range)
-			dist_map[coords[1], coords[0]] = weights[k]
-		return dist_map
+			coords = pose_to_coords_frame(k, self.pose_range, self.coords_range)
+			X_lst.append(coords[0])
+			Z_lst.append(coords[1])
+			val_lst.append(weights[k])
+		ax.scatter(X_lst, Z_lst, c=val_lst, s=5, cmap='hot', zorder=2)
 
 	def find_peak(self):
 		np_particles = np.array(self.particles)
 		num_GMM_components = confirm_nComponents(np_particles)
 		gm = GaussianMixture(n_components=num_GMM_components).fit(np_particles)
-		print(f'gm.weights = {gm.weights_}')
+		#print(f'gm.weights = {gm.weights_}')
 		#print(f'gm.means = {gm.means_}')
 		#print(f'gm.covariances = {gm.covariances_}')
 		return gm

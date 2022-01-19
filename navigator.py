@@ -36,8 +36,11 @@ H, W = semantic_map.shape[:2]
 occ_map = np.load(f'output/semantic_map/{scene_name}/BEV_occupancy_map.npy', allow_pickle=True)
 
 PF = ParticleFilter(10000, semantic_map.copy(), pose_range, coords_range)
-dist_map = PF.visualizeBelief()
-plt.imshow(dist_map, vmin=0.)
+
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 100))
+PF.visualizeBelief(ax)
+ax.get_xaxis().set_visible(False)
+ax.get_yaxis().set_visible(False)
 plt.title('initial particle distribution')
 plt.show()
 
