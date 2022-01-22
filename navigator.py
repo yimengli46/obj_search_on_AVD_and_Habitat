@@ -7,10 +7,13 @@ import matplotlib.pyplot as plt
 import math
 from math import cos, sin, acos, atan2, pi, floor
 import random
-from navigation_utils import get_obs, random_move, get_obs_panor, read_map_npy, get_pose, change_brightness
+from navigation_utils import get_obs, random_move, get_obs_panor, read_map_npy, get_pose, change_brightness, SimpleRLEnv
 from baseline_utils import apply_color_to_map, pose_to_coords
 from map_utils import SemanticMap
 from PF_continuous_utils import ParticleFilter
+import habitat
+import habitat_sim
+
 
 dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
 scene_name = 'Allensville_0'
@@ -24,10 +27,6 @@ flag_gt_semantic_map = True
 
 np.random.seed(SEED)
 random.seed(SEED)
-
-# load img list
-img_act_dict = np.load('{}/{}/img_act_dict.npy'.format(dataset_dir, scene_name), allow_pickle=True).item()
-img_names = list(img_act_dict.keys())
 
 if flag_gt_semantic_map:
 	sem_map_npy = np.load(f'output/gt_semantic_map_from_SceneGraph/{scene_name}/gt_semantic_map.npy', allow_pickle=True).item()
@@ -44,17 +43,30 @@ ax.get_yaxis().set_visible(False)
 plt.title('initial particle distribution')
 plt.show()
 
-
 sem_map = SemanticMap() # build the observed sem map
 traverse_lst = []
 
-# randomly pick a start point
-cur_img_id = random.choice(img_names)
-cur_img_id = random.choice(['077122135', '077122180', '079120135', '089126315'])
+#================================ load habitat env============================================
+config = habitat.get_config(config_paths="/home/yimeng/Datasets/habitat-lab/configs/tasks/devendra_objectnav_gibson.yaml")
+config.defrost()
+config.DATASET.DATA_PATH = '/home/yimeng/Datasets/habitat-lab/data/datasets/objectnav/gibson/all.json.gz'
+config.DATASET.SCENES_DIR = '/home/yimeng/Datasets/habitat-lab/data/scene_datasets/'
+#config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
+config.TASK.SENSORS.append("HEADING_SENSOR")
+config.freeze()
+env = SimpleRLEnv(config=config)
 
 step = 0
 while step < NUM_STEPS:
-	print(f'step = {step}, img_id = {cur_img_id}')
+	print(f'step = {step}')
+
+	obs = env.reset()
+	print(f'obs = {obs}')
+
+	agent_pos = env.habitat_env.sim.get_agent_state().position
+	agent_rot = env.habitat_env.sim.get_agent_state().rotation
+	angle = habitat_sim.utils.common.quat_to_angle_axis(agent_rot)
+	print(f'agent position = {agent_pos}, rot = {agent_rot}, angle = {angle}')
 
 	obs_rgb, obs_depth = get_obs(cur_img_id)
 	traverse_lst.append(cur_img_id)
@@ -65,7 +77,6 @@ while step < NUM_STEPS:
 	if step % 50 == 0:
 		#==================================== visualize the path on the map ==============================
 		observed_map, observed_area_flag = sem_map.get_semantic_map()
-
 
 		observed_area_flag = (observed_area_flag[coords_range[1]:coords_range[3]+1, coords_range[0]:coords_range[2]+1])
 		## for the explored free space visualization
@@ -101,26 +112,6 @@ while step < NUM_STEPS:
 			x_coord, z_coord = pose_to_coords((cur_pose[0], -cur_pose[1]), pose_range, coords_range, cell_size=.1)
 			x_coord_lst.append(x_coord)
 			z_coord_lst.append(z_coord)
-
-		'''
-		fig, ax = plt.subplots(nrows=2, ncols=1, figsize=(50, 200))
-		ax[0].imshow(color_semantic_map)
-		ax[0].get_xaxis().set_visible(False)
-		ax[0].get_yaxis().set_visible(False)
-		ax[0].scatter(x_coord_lst, z_coord_lst, s=30, c='red', zorder=2)
-		ax[0].plot(x_coord_lst, z_coord_lst, lw=5, c='blue', zorder=1)
-
-		dist_map = PF.visualizeBelief()
-		dist_map = dist_map[coords_range[1]:coords_range[3]+1, coords_range[0]:coords_range[2]+1]
-		ax[1].imshow(dist_map, vmin=0.)
-		ax[1].get_xaxis().set_visible(False)
-		ax[1].get_yaxis().set_visible(False)
-		fig.tight_layout()
-		plt.show()
-		#plt.savefig('{}/observed_area_{}_steps.jpg'.format(saved_folder, step))
-		#plt.close()
-		#assert 1==2
-		'''
 
 		fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 100))
 		ax.imshow(color_semantic_map)

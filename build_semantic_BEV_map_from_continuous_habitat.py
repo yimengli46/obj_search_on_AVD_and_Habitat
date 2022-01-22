@@ -5,43 +5,43 @@ import matplotlib.pyplot as plt
 import math
 from math import cos, sin, acos, atan2, pi, floor
 from baseline_utils import project_pixels_to_world_coords, convertInsSegToSSeg, convertMaskRCNNToSSeg, convertPanopSegToSSeg, apply_color_to_map, create_folder, save_fig_through_plt
-
+import habitat
+import habitat_sim
 #from semantic_prediction import SemanticPredMaskRCNN
+from panoptic_prediction import PanopPred
+from navigation_utils import SimpleRLEnv
+import random
+
+from habitat.tasks.utils import cartesian_to_polar, quaternion_rotate_vector
+
 
 dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
 scene_list = ['Allensville_0']
-#scene_list = ['Beechwood_0']
-#scene_list = ['Hanson_0', 'Stockman_0', 'Pinesdale_0', 'Collierville_1', 'Shelbyville_2', 'Coffeen_0', 'Corozal_1', 'Stockman_2']
-#scene_list = ['Woodbine_0', 'Ranchester_0', 'Mifflinburg_1', 'Lakeville_1', 'Hanson_2', 'Pomaria_2', 'Wainscott_1', 'Hiteman_2', 'Coffeen_2', 'Onaga_0', 'Pomaria_0', 'Newfields_1', 'Shelbyville_0', 'Klickitat_0']
-#scene_list = ['Darden_1', 'Merom_1', 'Lindenwood_0', 'Coffeen_3', 'Klickitat_2', 'Hiteman_1', 'Forkland_2', 'Newfields_0', 'Mifflinburg_2', 'Marstons_1', 'Shelbyville_1', 'Tolstoy_1', 'Darden_0', 'Tolstoy_0']
-#scene_list = ['Marstons_3', 'Forkland_1', 'Hanson_1', 'Klickitat_1', 'Markleeville_1', 'Merom_0', 'Leonardo_2', 'Benevolence_2', 'Hiteman_0', 'Pinesdale_1', 'Collierville_0', 'Cosmos_0', 'Newfields_2']
-#scene_list = ['Forkland_0', 'Collierville_2', 'Woodbine_1', 'Wainscott_0', 'Coffeen_1', 'Markleeville_0', 'Wiconisco_0', 'Mifflinburg_0', 'Lindenwood_1', 'Stockman_1']
-#scene_list = ['Corozal_0', 'Pomaria_1', 'Onaga_1', 'Wiconisco_2', 'Darden_2', 'Ranchester_1', 'Cosmos_1', 'Benevolence_1', 'Leonardo_0', 'Beechwood_1', 'Lakeville_0', 'Marstons_0', 'Wiconisco_1', 'Benevolence_0', 'Leonardo_1', 'Marstons_2']
-sceneGraph_npz_folder = '/home/yimeng/Datasets/3DSceneGraph/3DSceneGraph_tiny/data/automated_graph'
 
 cell_size = 0.1
 UNIGNORED_CLASS = []
-step_size = 50
+step_size = 20
 map_boundary = 5
 y_coord_size = 1000
 flag_first_time_having_pixels = True
 IGNORED_CLASS = [0, 23] # 'unlabeld', 'ceiling'
-detector = 'InstanceSeg' #'InstanceSeg'
+detector = 'PanopticSeg' #'InstanceSeg'
+max_STEPS = 2000
 
-'''
-for i in range(41):
-	if i not in UNIGNORED_CLASS:
-		IGNORED_CLASS.append(i)
-'''
+panop_pred = PanopPred()
 
-# initialize object detector
-#sem_pred = SemanticPredMaskRCNN()
-
-if detector == 'InstanceSeg':
-	semantic_map_output_folder = f'output/semantic_map_InstanceSeg'
-elif detector == 'PanopticSeg':
-	semantic_map_output_folder = f'output/semantic_map_PanopticSeg'
+semantic_map_output_folder = f'output/semantic_map_continuous'
 create_folder(semantic_map_output_folder, clean_up=False)
+
+#================================ load habitat env============================================
+config = habitat.get_config(config_paths="/home/yimeng/Datasets/habitat-lab/configs/tasks/devendra_objectnav_gibson.yaml")
+config.defrost()
+config.DATASET.DATA_PATH = '/home/yimeng/Datasets/habitat-lab/data/datasets/objectnav/gibson/all.json.gz'
+config.DATASET.SCENES_DIR = '/home/yimeng/Datasets/habitat-lab/data/scene_datasets/'
+#config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
+config.TASK.SENSORS.append("HEADING_SENSOR")
+config.freeze()
+env = SimpleRLEnv(config=config)
 
 for scene_id in range(len(scene_list)):
 	print(f'scene_id = {scene_id}')
@@ -53,15 +53,7 @@ for scene_id in range(len(scene_list)):
 	# load img list
 	img_act_dict = np.load('{}/{}/img_act_dict.npy'.format(dataset_dir, scene_name), allow_pickle=True).item()
 	img_names = list(img_act_dict.keys())
-
-	#================================== load scene npz and category dict ======================================
-	scene_graph_npz = np.load(f'{sceneGraph_npz_folder}/3DSceneGraph_{scene_name[:-2]}.npz', allow_pickle=True)['output'].item()
-	cat2id_dict = np.load('{}/{}/category_id_dict.npy'.format(dataset_dir, scene_name), allow_pickle=True).item()
-	if detector == 'InstanceSeg':
-		detectron2_folder = f'{dataset_dir}/{scene_name}/detectron2_pred'
-	elif detector == 'PanopticSeg':
-		detectron2_folder = f'{dataset_dir}/{scene_name}/panoptic_pred'
-		id2class_mapper = np.load('configs/COCO_PanopticSeg_labels_dict.npy', allow_pickle=True).item()
+	id2class_mapper = np.load('configs/COCO_PanopticSeg_labels_dict.npy', allow_pickle=True).item()
 
 	#======================================= initialize the grid ===========================================
 	min_X = 1000.0
@@ -89,28 +81,33 @@ for scene_id in range(len(scene_list)):
 	four_dim_grid = np.zeros((len(z_grid), y_coord_size, len(x_grid), 41)) # x, y, z, C
 	H, W = len(z_grid), len(x_grid)
 
+	obs = env.reset()
+	agent_pos = np.array([6.6, 0.17, -6.9])
+	agent_rot = habitat_sim.utils.common.quat_from_angle_axis(2.36, habitat_sim.geo.GRAVITY)
+	obs = env.habitat_env.sim.get_observations_at(agent_pos, agent_rot, keep_agent_at_new_pose=True)
 	#===================================== traverse the observations ===============================
-	#for idx, img_name in enumerate(img_names):
-	for idx, img_name in enumerate(['077122135', '077122180', '079120135', '089126315']):
-		#if idx == 100:
-		#	break
-
+	for idx in range(max_STEPS):
 		print('idx = {}'.format(idx))
-		#====================================== load rgb image, depth and sseg ==================================
-		rgb_img = cv2.imread(f'{dataset_dir}/{scene_name}/rgb/{img_name}.jpg', 1)[:, :, ::-1]
-		depth_img = cv2.imread(f'{dataset_dir}/{scene_name}/depth/{img_name}.png', cv2.IMREAD_UNCHANGED)
-		depth_img = depth_img/256.
-		depth_img = cv2.blur(depth_img, (3,3))
-		if detector == 'InstanceSeg':
-			detectron2_npy = np.load(f'{detectron2_folder}/{img_name}.npy', allow_pickle=True).item()
-			sseg_img = convertMaskRCNNToSSeg(detectron2_npy, det_thresh=0.9)
-		elif detector == 'PanopticSeg':
-			panopSeg_img = cv2.imread(f'{detectron2_folder}/{img_name}.png', cv2.IMREAD_UNCHANGED)
-			sseg_img = convertPanopSegToSSeg(panopSeg_img, id2class_mapper)
-		pose = img_act_dict[img_name]['pose'] # x, z, theta
-		print('pose = {}'.format(pose))
 
-		assert 1==2
+		agent_pos = env.habitat_env.sim.get_agent_state().position
+		agent_rot = env.habitat_env.sim.get_agent_state().rotation
+		#angle = habitat_sim.utils.common.quat_to_angle_axis(agent_rot)
+		heading_vector = quaternion_rotate_vector(agent_rot.inverse(), np.array([0, 0, -1]))
+
+		phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
+		z_neg_z_flip = np.pi
+		angle = phi + z_neg_z_flip
+		print(f'angle = {angle}')
+		#====================================== load rgb image, depth and sseg ==================================
+		rgb_img = obs['rgb']
+		depth_img = 5. * obs['depth']
+		depth_img = cv2.blur(depth_img, (3,3))
+		if detector == 'PanopticSeg':
+			panopSeg_img, _ = panop_pred.get_prediction(rgb_img, flag_vis=False)
+			sseg_img = convertPanopSegToSSeg(panopSeg_img, id2class_mapper)
+		pose = (agent_pos[0], agent_pos[2], -angle)
+		print('pose = {}'.format(pose))
+		#print(f'obs = {obs}')
 
 		if idx % step_size == 0:
 			'''
@@ -160,6 +157,12 @@ for scene_id in range(len(scene_list)):
 		# argmax over the category axis
 		semantic_map = np.argmax(grid_sum_height, axis=2)
 
+		#================================= take actions =======================================
+		action = random.choice(["TURN_LEFT", "MOVE_FORWARD"])
+		print(f'action = {action}')
+		obs = env.step(action)[0]
+		#print(f'obs = {obs}')
+
 		if x_coord.shape[0] == 0:
 			print('hhhhhh it happens as most pixels do not have labels')
 			continue
@@ -207,6 +210,8 @@ for scene_id in range(len(scene_list)):
 			# write the map with cv2 so the map image can be load directly
 			#cv2.imwrite('{}/step_{}_semantic.jpg'.format(saved_folder, idx), color_semantic_map[:, :, ::-1])
 			save_fig_through_plt(color_semantic_map, f'{saved_folder}/step_{idx}_semantic.jpg')
+
+
 
 	# save the final results
 	map_dict = {}

@@ -5,6 +5,7 @@ import math
 import matplotlib.patches as patches
 import networkx as nx
 import random
+import habitat
 
 dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
 scene_name = 'Allensville_0'
@@ -194,3 +195,15 @@ def change_brightness(img, flag, value=30):
     img = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
     return img
 
+class SimpleRLEnv(habitat.RLEnv):
+	def get_reward_range(self):
+		return [-1, 1]
+
+	def get_reward(self, observations):
+		return 0
+
+	def get_done(self, observations):
+		return self.habitat_env.episode_over
+
+	def get_info(self, observations):
+		return self.habitat_env.get_metrics()
