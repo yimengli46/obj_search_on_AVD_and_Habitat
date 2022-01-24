@@ -95,8 +95,8 @@ for scene_id in range(len(scene_list)):
 		heading_vector = quaternion_rotate_vector(agent_rot.inverse(), np.array([0, 0, -1]))
 
 		phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
-		z_neg_z_flip = np.pi
-		angle = phi + z_neg_z_flip
+		
+		angle = phi
 		print(f'angle = {angle}')
 		#====================================== load rgb image, depth and sseg ==================================
 		rgb_img = obs['rgb']
@@ -105,8 +105,9 @@ for scene_id in range(len(scene_list)):
 		if detector == 'PanopticSeg':
 			panopSeg_img, _ = panop_pred.get_prediction(rgb_img, flag_vis=False)
 			sseg_img = convertPanopSegToSSeg(panopSeg_img, id2class_mapper)
-		pose = (agent_pos[0], agent_pos[2], -angle)
+		pose = (agent_pos[0], agent_pos[2], angle)
 		print('pose = {}'.format(pose))
+		sem_map_pose = (pose[0], -pose[1], -pose[2])
 		#print(f'obs = {obs}')
 
 		if idx % step_size == 0:
@@ -132,7 +133,7 @@ for scene_id in range(len(scene_list)):
 			'''
 
 		#========================================= start the projection ================================
-		xyz_points, sseg_points = project_pixels_to_world_coords(sseg_img, depth_img, pose, gap=2, ignored_classes=IGNORED_CLASS)
+		xyz_points, sseg_points = project_pixels_to_world_coords(sseg_img, depth_img, sem_map_pose, gap=2, ignored_classes=IGNORED_CLASS)
 
 		mask_X = np.logical_and(xyz_points[0, :] > min_X, xyz_points[0, :] < max_X) 
 		mask_Y = np.logical_and(xyz_points[1, :] > 0.0, xyz_points[1, :] < 100.0)
