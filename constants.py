@@ -256,4 +256,4 @@ d3_41_colors_rgb: np.ndarray = np.array(
     dtype=np.uint8,
 )
 
-COCO_74_COLORS[0:41] = d3_41_colors_rgb[0:41]
+#COCO_74_COLORS[0:41] = d3_41_colors_rgb[0:41]

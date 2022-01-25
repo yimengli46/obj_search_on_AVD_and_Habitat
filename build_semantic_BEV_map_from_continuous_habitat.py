@@ -20,7 +20,7 @@ scene_list = ['Allensville_0']
 
 cell_size = 0.1
 UNIGNORED_CLASS = []
-step_size = 20
+step_size = 50
 map_boundary = 5
 y_coord_size = 1000
 flag_first_time_having_pixels = True
@@ -79,7 +79,7 @@ for scene_id in range(len(scene_list)):
 	x_grid = np.arange(min_X, max_X, cell_size)
 	z_grid = np.arange(min_Z, max_Z, cell_size)
 
-	four_dim_grid = np.zeros((len(z_grid), y_coord_size, len(x_grid), 41)) # x, y, z, C
+	four_dim_grid = np.zeros((len(z_grid), y_coord_size, len(x_grid), 60)) # x, y, z, C
 	H, W = len(z_grid), len(x_grid)
 
 	obs = env.reset()
@@ -112,7 +112,7 @@ for scene_id in range(len(scene_list)):
 		#print(f'obs = {obs}')
 
 		if idx % step_size == 0:
-			#'''
+			'''
 			fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(15, 6))
 			ax[0].imshow(rgb_img)
 			ax[0].get_xaxis().set_visible(False)
@@ -131,7 +131,7 @@ for scene_id in range(len(scene_list)):
 			#fig.savefig('{}/step_{}.jpg'.format(saved_folder, idx))
 			#plt.close()
 			#assert 1==2
-			#'''
+			'''
 
 		#========================================= start the projection ================================
 		xyz_points, sseg_points = project_pixels_to_world_coords(sseg_img, depth_img, sem_map_pose, gap=2, ignored_classes=IGNORED_CLASS)

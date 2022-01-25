@@ -18,7 +18,7 @@ import random
 
 dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
 scene_name = 'Allensville_0'
-SEED = 5
+SEED = 10
 NUM_STEPS = 2000
 cell_size = 0.1
 flag_vis = False
@@ -27,7 +27,6 @@ vis_observed_area_from_panorama = False
 flag_gt_semantic_map = True
 NUM_STEPS_EXPLORE = 10
 NUM_STEPS_vis = 10
-random.seed(10)
 detector = 'PanopticSeg'
 
 np.random.seed(SEED)
@@ -39,16 +38,7 @@ gt_semantic_map, pose_range, coords_range = read_map_npy(sem_map_npy)
 H, W = gt_semantic_map.shape[:2]
 #occ_map = np.load(f'output/semantic_map/{scene_name}/BEV_occupancy_map.npy', allow_pickle=True)
 
-'''
 PF = ParticleFilter(10000, gt_semantic_map.copy(), pose_range, coords_range)
-
-fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 100))
-PF.visualizeBelief(ax)
-ax.get_xaxis().set_visible(False)
-ax.get_yaxis().set_visible(False)
-plt.title('initial particle distribution')
-plt.show()
-'''
 
 semMap_module = SemanticMap(coords_range) # build the observed sem map
 traverse_lst = []
@@ -62,6 +52,18 @@ config.DATASET.SCENES_DIR = '/home/yimeng/Datasets/habitat-lab/data/scene_datase
 #config.TASK.SENSORS.append("HEADING_SENSOR")
 config.freeze()
 env = SimpleRLEnv(config=config)
+
+#===================================== visualize initial particles ===============================
+#'''
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 100))
+PF.visualizeBelief(ax)
+ax.get_xaxis().set_visible(False)
+ax.get_yaxis().set_visible(False)
+plt.title('initial particle distribution')
+plt.show()
+#fig.savefig(f'{saved_folder}/temp.jpg')
+#plt.close()
+#'''
 
 #===================================== setup the start location ===============================#
 obs = env.reset()

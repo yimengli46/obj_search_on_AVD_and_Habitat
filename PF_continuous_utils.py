@@ -364,8 +364,8 @@ class ParticleFilter():
 		ax.imshow(dist_map)
 		# visualize the particles
 		particles = np.array(self.particles)
-		poses = pose_to_coords_frame_numpy(particles, self.pose_range, self.coords_range)
-		ax.scatter(poses[:, 0], poses[:, 1], s=5, c='red', zorder=2)
+		particle_coords = pose_to_coords_frame_numpy(particles, self.pose_range, self.coords_range)
+		ax.scatter(particle_coords[:, 0], particle_coords[:, 1], s=5, c='red', zorder=2)
 
 	def visualizeWeights(self, weights, ax):
 		# visualize the background
