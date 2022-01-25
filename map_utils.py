@@ -8,7 +8,7 @@ from baseline_utils import project_pixels_to_world_coords, convertPanopSegToSSeg
 from panoptic_prediction import PanopPred
 
 class SemanticMap:
-	def __init__(self):
+	def __init__(self, coords_range):
 
 		self.dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
 		self.scene_name = 'Allensville_0'
@@ -20,8 +20,10 @@ class SemanticMap:
 		self.map_boundary = 5
 		self.detector = 'PanopticSeg'
 		self.panop_pred = PanopPred()
+		self.coords_range = coords_range
 
 		self.IGNORED_CLASS = [54] # ceiling class is ignored
+		self.UNDETECTED_PIXELS_CLASS = 59
 
 		# load img list
 		self.img_act_dict = np.load('{}/{}/img_act_dict.npy'.format(self.dataset_dir, self.scene_name), allow_pickle=True).item()
@@ -62,7 +64,7 @@ class SemanticMap:
 		if self.detector == 'PanopticSeg':
 			panopSeg_img, _ = self.panop_pred.get_prediction(rgb_img, flag_vis=False)
 			sseg_img = convertPanopSegToSSeg(panopSeg_img, self.id2class_mapper)
-		sseg_img += 1 # label 0 is for explored area?
+		sseg_img = np.where(sseg_img==0, self.UNDETECTED_PIXELS_CLASS, sseg_img) # label 59 for pixels observed but undetected by the detector
 		sem_map_pose = (pose[0], -pose[1], -pose[2]) # x, z, theta
 		print('pose = {}'.format(pose))
 
@@ -108,18 +110,39 @@ class SemanticMap:
 
 		# sum over the height axis
 		grid_sum_height = np.sum(self.four_dim_grid, axis=1)
-		# argmax over the category axis
-		semantic_map = np.argmax(grid_sum_height, axis=2)
+		grid_undetected_class = grid_sum_height[:, :, self.UNDETECTED_PIXELS_CLASS]
+		grid_detected_class = grid_sum_height[:, :, :self.UNDETECTED_PIXELS_CLASS]
+		# argmax over the detected category axis
+		semantic_map = np.argmax(grid_detected_class, axis=2)
+		mask_explored_undetected_area = np.logical_and(semantic_map==0, grid_undetected_class > 0)
+		semantic_map[mask_explored_undetected_area] = self.UNDETECTED_PIXELS_CLASS
 
 		grid_sum_cat = np.sum(grid_sum_height, axis=2)
 		observed_area_flag = (grid_sum_cat > 0)
 
 		# get occupancy map
-		occupancy_map = semantic_map.copy()
-		occupancy_map = np.where(occupancy_map==57, 2, 0) # floor index 57, free space index 2
+		occupancy_map = np.zeros(semantic_map.shape, dtype=np.int8)
+		occupancy_map = np.where(semantic_map==57, 3, occupancy_map) # floor index 57, free space index 3
+		occupancy_map = np.where(semantic_map==self.UNDETECTED_PIXELS_CLASS, 2, occupancy_map) # explored but undetected area, index 2
 		# occupied area are the explored area but not floor
 		mask_explored_occupied_area = np.logical_and(observed_area_flag, occupancy_map==0)
 		occupancy_map[mask_explored_occupied_area] = 1 # occupied space index
+
+		'''
+		temp_semantic_map = semantic_map[self.coords_range[1]:self.coords_range[3]+1, self.coords_range[0]:self.coords_range[2]+1]
+		temp_occupancy_map = occupancy_map[self.coords_range[1]:self.coords_range[3]+1, self.coords_range[0]:self.coords_range[2]+1]
+		fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(200, 100))
+		# visualize gt semantic map
+		ax[0].imshow(temp_semantic_map)
+		ax[0].get_xaxis().set_visible(False)
+		ax[0].get_yaxis().set_visible(False)
+		ax[0].set_title('semantic map')
+		ax[1].imshow(temp_occupancy_map, vmax=3)
+		ax[1].get_xaxis().set_visible(False)
+		ax[1].get_yaxis().set_visible(False)
+		ax[1].set_title('occupancy map')
+		plt.show()
+		'''
 
 		return semantic_map, observed_area_flag, occupancy_map
 

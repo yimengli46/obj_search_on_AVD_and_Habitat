@@ -26,7 +26,7 @@ saved_folder = 'output/explore_PF_continuous'
 vis_observed_area_from_panorama = False
 flag_gt_semantic_map = True
 NUM_STEPS_EXPLORE = 10
-NUM_STEPS_vis = 50
+NUM_STEPS_vis = 10
 random.seed(10)
 detector = 'PanopticSeg'
 
@@ -50,7 +50,7 @@ plt.title('initial particle distribution')
 plt.show()
 '''
 
-semMap_module = SemanticMap() # build the observed sem map
+semMap_module = SemanticMap(coords_range) # build the observed sem map
 traverse_lst = []
 
 #================================ load habitat env============================================
@@ -95,7 +95,7 @@ while step < NUM_STEPS:
 		observed_area_flag = (observed_area_flag[coords_range[1]:coords_range[3]+1, coords_range[0]:coords_range[2]+1])
 		## for the explored free space visualization
 		mask_observed_and_non_obj = np.logical_and(observed_area_flag, gt_semantic_map == 0)
-		gt_semantic_map[mask_observed_and_non_obj] = 40
+		gt_semantic_map[mask_observed_and_non_obj] = 59 # class index for explored non-object area
 
 		color_gt_semantic_map = apply_color_to_map(gt_semantic_map)
 		color_gt_semantic_map = change_brightness(color_gt_semantic_map, observed_area_flag, value=60)
@@ -114,12 +114,6 @@ while step < NUM_STEPS:
 			x_coord_lst.append(x_coord)
 			z_coord_lst.append(z_coord)
 
-		#print(f'color_gt_semantic_map.shape = {color_gt_semantic_map.shape}')
-		#print(f'color_gt_semantic_map = {color_gt_semantic_map}')
-		#print(f'color_built_semantic_map.shape = {color_built_semantic_map.shape}')
-
-		#assert 1==2
-
 		#'''
 		fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(200, 200))
 		# visualize gt semantic map
@@ -135,17 +129,11 @@ while step < NUM_STEPS:
 		ax[0][1].get_yaxis().set_visible(False)
 		ax[0][1].set_title('built semantic map')
 
-		ax[1][0].imshow(occupancy_map)
+		ax[1][0].imshow(occupancy_map, vmax=3)
 		ax[1][0].get_xaxis().set_visible(False)
 		ax[1][0].get_yaxis().set_visible(False)
 		ax[1][0].set_title('occupancy map')
-		# visualize built semantic map
-		#ax[1][1].imshow(color_built_semantic_map)
-		#ax[1][1].get_xaxis().set_visible(False)
-		#ax[1][1].get_yaxis().set_visible(False)
-		#ax[1][1].set_title('built semantic map')
-		#fig.tight_layout()
-		#plt.title('observed area')
+		plt.title('observed area')
 		plt.show()
 		#fig.savefig(f'{saved_folder}/temp.jpg')
 		#plt.close()
