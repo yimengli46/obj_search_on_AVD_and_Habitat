@@ -11,7 +11,7 @@ import math
 from math import cos, sin, acos, atan2, pi, floor, tan
 from io import StringIO
 import matplotlib.pyplot as plt
-from constants import coco_categories_mapping, panopticSeg_mapping
+from constants import coco_categories_mapping, panopticSeg_mapping, d3_41_colors_rgb, COCO_74_COLORS
 
 def minus_theta_fn(previous_theta, current_theta):
   result = current_theta - previous_theta
@@ -166,61 +166,20 @@ def convertPanopSegToSSeg (PanopSeg, id2cat_dict):
 
   return SSeg
 
-
-d3_41_colors_rgb: np.ndarray = np.array(
-    [
-        [0, 0, 0],
-        [31, 119, 180],
-        [174, 199, 232],
-        [255, 127, 14],
-        [255, 187, 120],
-        [44, 160, 44],
-        [152, 223, 138],
-        [214, 39, 40],
-        [255, 152, 150],
-        [148, 103, 189],
-        [197, 176, 213],
-        [140, 86, 75],
-        [196, 156, 148],
-        [227, 119, 194],
-        [247, 182, 210],
-        [127, 127, 127],
-        [199, 199, 199],
-        [188, 189, 34],
-        [219, 219, 141],
-        [23, 190, 207],
-        [158, 218, 229],
-        [57, 59, 121],
-        [82, 84, 163],
-        [107, 110, 207],
-        [156, 158, 222],
-        [99, 121, 57],
-        [140, 162, 82],
-        [181, 207, 107],
-        [206, 219, 156],
-        [140, 109, 49],
-        [189, 158, 57],
-        [231, 186, 82],
-        [231, 203, 148],
-        [132, 60, 57],
-        [173, 73, 74],
-        [214, 97, 107],
-        [231, 150, 156],
-        [123, 65, 115],
-        [165, 81, 148],
-        [206, 109, 189],
-        [222, 158, 214],
-        [255, 255, 255]
-    ],
-    dtype=np.uint8,
-)
-
-def apply_color_to_map (semantic_map, num_classes=41):
+# if # of classes is <= 41, flag_small_categories is True
+def apply_color_to_map (semantic_map, flag_small_categories=False):
   assert len(semantic_map.shape) == 2
+  if flag_small_categories:
+    COLOR = d3_41_colors_rgb
+    num_classes = 41
+  else:
+    COLOR = COCO_74_COLORS
+    num_classes = 74
+
   H, W = semantic_map.shape
   color_semantic_map = np.zeros((H, W, 3), dtype='uint8')
   for i in range(num_classes):
-    color_semantic_map[semantic_map==i] = d3_41_colors_rgb[i]
+    color_semantic_map[semantic_map==i] = COLOR[i]
   return color_semantic_map
 
 def apply_color_to_pointCloud (sseg_points, num_classes=41):

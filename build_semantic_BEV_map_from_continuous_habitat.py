@@ -27,6 +27,7 @@ flag_first_time_having_pixels = True
 IGNORED_CLASS = [0, 23] # 'unlabeld', 'ceiling'
 detector = 'PanopticSeg' #'InstanceSeg'
 max_STEPS = 2000
+random.seed(10)
 
 panop_pred = PanopPred()
 
@@ -39,7 +40,7 @@ config.defrost()
 config.DATASET.DATA_PATH = '/home/yimeng/Datasets/habitat-lab/data/datasets/objectnav/gibson/all.json.gz'
 config.DATASET.SCENES_DIR = '/home/yimeng/Datasets/habitat-lab/data/scene_datasets/'
 #config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
-config.TASK.SENSORS.append("HEADING_SENSOR")
+#config.TASK.SENSORS.append("HEADING_SENSOR")
 config.freeze()
 env = SimpleRLEnv(config=config)
 
@@ -111,7 +112,7 @@ for scene_id in range(len(scene_list)):
 		#print(f'obs = {obs}')
 
 		if idx % step_size == 0:
-			'''
+			#'''
 			fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(15, 6))
 			ax[0].imshow(rgb_img)
 			ax[0].get_xaxis().set_visible(False)
@@ -130,7 +131,7 @@ for scene_id in range(len(scene_list)):
 			#fig.savefig('{}/step_{}.jpg'.format(saved_folder, idx))
 			#plt.close()
 			#assert 1==2
-			'''
+			#'''
 
 		#========================================= start the projection ================================
 		xyz_points, sseg_points = project_pixels_to_world_coords(sseg_img, depth_img, sem_map_pose, gap=2, ignored_classes=IGNORED_CLASS)
