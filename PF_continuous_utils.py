@@ -10,8 +10,9 @@ from sklearn.mixture import GaussianMixture
 from navigation_utils import change_brightness
 
 mode = 'semantic_prior'
-flag_visualize_ins_weights = True
+flag_visualize_ins_weights = False
 flag_visualize_peaks = True
+flag_visualize_detected_centers = False
 
 cat2idx_dict = get_class_mapper()
 idx2cat_dict = {v: k for k, v in cat2idx_dict.items()}
@@ -37,7 +38,7 @@ def compute_centers(observed_semantic_map):
 	y = np.linspace(0, H-1, H)
 	xv, yv = np.meshgrid(x, y)
 	#====================================== compute centers of semantic classes =====================================
-	IGNORED_CLASS = [0, 40]
+	IGNORED_CLASS = [0, 59]
 	cat_binary_map = observed_semantic_map.copy()
 	for cat in IGNORED_CLASS:
 		cat_binary_map = np.where(cat_binary_map==cat, -1, cat_binary_map)
@@ -251,7 +252,7 @@ class ParticleFilter():
 		semantic_map = self.semantic_map.copy()
 		semantic_map[observed_area_flag == False] = 0
 		mask_observed_and_non_obj = np.logical_and(observed_area_flag, semantic_map == 0)
-		semantic_map[mask_observed_and_non_obj] = 40
+		semantic_map[mask_observed_and_non_obj] = 59
 		color_semantic_map = apply_color_to_map(semantic_map)
 		#plt.imshow(color_semantic_map)
 		#plt.show()
@@ -260,24 +261,22 @@ class ParticleFilter():
 		print(f'num_instances = {len(list_instances)}')
 
 		#=============================== visualize detected instance centers ======================
-		#'''
-		fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 120))
-		ax.imshow(color_semantic_map)
-		ax.get_xaxis().set_visible(False)
-		ax.get_yaxis().set_visible(False)
-		x_coord_lst = []
-		z_coord_lst = []
-		for idx, inst in enumerate(list_instances):
-			inst_coords = inst['center']
-			x_coord_lst.append(inst_coords[0])
-			z_coord_lst.append(inst_coords[1])
-		ax.scatter(x_coord_lst, z_coord_lst, s=30, c='white', zorder=2)
-		#fig.tight_layout()
-		plt.title('visualize detected instance centers')
-		plt.show()
-		#assert 1==2
-		#'''
-
+		if flag_visualize_detected_centers:
+			fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 120))
+			ax.imshow(color_semantic_map)
+			ax.get_xaxis().set_visible(False)
+			ax.get_yaxis().set_visible(False)
+			x_coord_lst = []
+			z_coord_lst = []
+			for idx, inst in enumerate(list_instances):
+				inst_coords = inst['center']
+				x_coord_lst.append(inst_coords[0])
+				z_coord_lst.append(inst_coords[1])
+			ax.scatter(x_coord_lst, z_coord_lst, s=30, c='white', zorder=2)
+			#fig.tight_layout()
+			plt.title('visualize detected instance centers')
+			plt.show()
+		
 		#========================================= Compute Priors ===========================================
 		for idx, inst in enumerate(list_instances):
 			inst_pose = pxl_coords_to_pose(inst['center'], self.pose_range, self.coords_range, flag_cropped=True)
@@ -291,7 +290,7 @@ class ParticleFilter():
 					visualize_GMM_dist(weight_k1, inst['size'], inst_pose, self.particles, weights)
 
 		#==================================== visualization ====================================
-		if True:
+		if False:
 			color_semantic_map = apply_color_to_map(semantic_map)
 			color_semantic_map = change_brightness(color_semantic_map, observed_area_flag, value=60)
 
@@ -343,20 +342,29 @@ class ParticleFilter():
 			print(f'len(poses) = {len(poses)}')
 			self.particles = poses
 
+	def getPeak(self):
 		#===================================== finding the peak ================================
-		gm = self.find_peak()
-		peaks = gm.means_
-		peaks_coords = pose_to_coords_numpy(peaks, self.pose_range, self.coords_range)
+		gm = self.findPeak()
+		peaks_poses = gm.means_
+		peaks_coords = pose_to_coords_frame_numpy(peaks_poses, self.pose_range, self.coords_range)
+		# choose peak with the largest weight
+		chosen_peak_idx = np.argmax(np.array(gm.weights_))
+		chosen_peak_pose = peaks_poses[chosen_peak_idx]
 		
 		#===================================== visualize particles and the peak =============================
-		fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 120))
-		ax.get_xaxis().set_visible(False)
-		ax.get_yaxis().set_visible(False)
-		self.visualizeBelief(ax)
-		ax.scatter(peaks_coords[:, 0], peaks_coords[:, 1], s=30, c='white', zorder=3)
-		#fig.tight_layout()
-		plt.title('particles (white nodes are peaks of Gaussian components)')
-		plt.show()
+		if flag_visualize_peaks:
+			fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 120))
+			ax.get_xaxis().set_visible(False)
+			ax.get_yaxis().set_visible(False)
+			self.visualizeBelief(ax)
+			ax.scatter(peaks_coords[:, 0], peaks_coords[:, 1], s=30, c='white', zorder=3)
+			# plot the selected peak in yellow
+			ax.scatter(peaks_coords[chosen_peak_idx, 0], peaks_coords[chosen_peak_idx, 1], s=50, c='yellow', zorder=4)
+			#fig.tight_layout()
+			plt.title('particles (white nodes are peaks of Gaussian components, yellow node is the chosen peak)')
+			plt.show()
+
+		return chosen_peak_pose
 
 	def visualizeBelief(self, ax):
 		# visualize the background
@@ -381,7 +389,7 @@ class ParticleFilter():
 			val_lst.append(weights[k])
 		ax.scatter(X_lst, Z_lst, c=val_lst, s=5, cmap='hot', zorder=2)
 
-	def find_peak(self):
+	def findPeak(self):
 		np_particles = np.array(self.particles)
 		num_GMM_components = confirm_nComponents(np_particles)
 		gm = GaussianMixture(n_components=num_GMM_components).fit(np_particles)

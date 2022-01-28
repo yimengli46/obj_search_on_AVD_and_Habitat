@@ -68,23 +68,24 @@ class SemanticMap:
 		sem_map_pose = (pose[0], -pose[1], -pose[2]) # x, z, theta
 		print('pose = {}'.format(pose))
 
-		'''
-		fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(15, 6))
-		ax[0].imshow(rgb_img)
-		ax[0].get_xaxis().set_visible(False)
-		ax[0].get_yaxis().set_visible(False)
-		ax[0].set_title("rgb")
-		ax[1].imshow(apply_color_to_map(sseg_img))
-		ax[1].get_xaxis().set_visible(False)
-		ax[1].get_yaxis().set_visible(False)
-		ax[1].set_title("sseg")
-		ax[2].imshow(depth_img)
-		ax[2].get_xaxis().set_visible(False)
-		ax[2].get_yaxis().set_visible(False)
-		ax[2].set_title("depth")
-		fig.tight_layout()
-		plt.show()
-		'''
+		#'''
+		if True:
+			fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(15, 6))
+			ax[0].imshow(rgb_img)
+			ax[0].get_xaxis().set_visible(False)
+			ax[0].get_yaxis().set_visible(False)
+			ax[0].set_title("rgb")
+			ax[1].imshow(apply_color_to_map(sseg_img))
+			ax[1].get_xaxis().set_visible(False)
+			ax[1].get_yaxis().set_visible(False)
+			ax[1].set_title("sseg")
+			ax[2].imshow(depth_img)
+			ax[2].get_xaxis().set_visible(False)
+			ax[2].get_yaxis().set_visible(False)
+			ax[2].set_title("depth")
+			fig.tight_layout()
+			plt.show()
+		#'''
 
 		xyz_points, sseg_points = project_pixels_to_world_coords(sseg_img, depth_img, sem_map_pose, gap=2, ignored_classes=self.IGNORED_CLASS)
 

@@ -11,6 +11,7 @@ from navigation_utils import get_obs, random_move, get_obs_panor, read_map_npy, 
 from baseline_utils import apply_color_to_map, pose_to_coords
 from map_utils import SemanticMap
 from PF_continuous_utils import ParticleFilter
+from localNavigator_bugAlg import LocalNavigator
 import habitat
 import habitat_sim
 from habitat.tasks.utils import cartesian_to_polar, quaternion_rotate_vector
@@ -25,7 +26,7 @@ flag_vis = False
 saved_folder = 'output/explore_PF_continuous'
 vis_observed_area_from_panorama = False
 flag_gt_semantic_map = True
-NUM_STEPS_EXPLORE = 10
+NUM_STEPS_EXPLORE = 1000
 NUM_STEPS_vis = 10
 detector = 'PanopticSeg'
 
@@ -39,6 +40,7 @@ H, W = gt_semantic_map.shape[:2]
 #occ_map = np.load(f'output/semantic_map/{scene_name}/BEV_occupancy_map.npy', allow_pickle=True)
 
 PF = ParticleFilter(10000, gt_semantic_map.copy(), pose_range, coords_range)
+LN = LocalNavigator(pose_range, coords_range)
 
 semMap_module = SemanticMap(coords_range) # build the observed sem map
 traverse_lst = []
@@ -143,15 +145,18 @@ while step < NUM_STEPS:
 		#'''
 	
 	#==================================== update particle filter =============================
-	'''
 	if step % NUM_STEPS_EXPLORE == 0:
 		PF.observeUpdate(observed_area_flag)
 		# get the peak global coordinates from particle filter
 		subgoal_pose = PF.getPeak()
-	'''
+		print(f'subgoal_pose = {subgoal_pose}')
+		map_pose = (pose[0], -pose[1], -pose[2])
+		LN.new_episode(map_pose, subgoal_pose)
+		#assert 1==2
 		
 	#====================================== take next action ================================
 	step += 1
-	#action = semantic_map.move_towards_subgoal(subgoal_pose)
-	action = random.choice(["TURN_LEFT", "MOVE_FORWARD"])
+	#action = random.choice(["MOVE_FORWARD"])
+	action = LN.local_nav(occupancy_map, map_pose, subgoal_pose)
+	print(f'action = {action}')
 	obs = env.step(action)[0]
