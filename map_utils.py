@@ -6,9 +6,11 @@ import math
 from math import cos, sin, acos, atan2, pi, floor
 from baseline_utils import project_pixels_to_world_coords, convertPanopSegToSSeg, apply_color_to_map
 from panoptic_prediction import PanopPred
+from baseline_utils import pose_to_coords_frame, pxl_coords_to_pose
+
 
 class SemanticMap:
-	def __init__(self, coords_range):
+	def __init__(self, pose_range, coords_range):
 
 		self.dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
 		self.scene_name = 'Allensville_0'
@@ -20,6 +22,7 @@ class SemanticMap:
 		self.map_boundary = 5
 		self.detector = 'PanopticSeg'
 		self.panop_pred = PanopPred()
+		self.pose_range = pose_range
 		self.coords_range = coords_range
 
 		self.IGNORED_CLASS = [54] # ceiling class is ignored
@@ -147,39 +150,41 @@ class SemanticMap:
 
 		return semantic_map, observed_area_flag, occupancy_map
 
-		'''
-		# get the local map
-		if idx == 0:
-			min_x_coord = max(np.min(x_coord)-map_boundary, 0)
-			max_x_coord = min(np.max(x_coord)+map_boundary, W-1)
-			min_z_coord = max(np.min(z_coord)-map_boundary, 0)
-			max_z_coord = min(np.max(z_coord)+map_boundary, H-1)
+	def find_subgoal(self, peak_pose, occupancy_map):
+		peak_coords = pose_to_coords_frame(peak_pose, self.pose_range, self.coords_range)
+
+		H, W = occupancy_map.shape
+		x = np.linspace(0, W-1, W)
+		y = np.linspace(0, H-1, H)
+		xv, yv = np.meshgrid(x, y)
+		map_coords = np.stack((xv, yv), axis=2).astype(np.int16)
+
+		# take the non-obj pixels
+		mask_free = (occupancy_map > 1)
+		free_map_coords = map_coords[mask_free]
+
+		if free_map_coords.shape[0] == 0:
+			print(f'no free space cells on the occupancy map')
+			return peak_coords, peak_pose
 		else:
-			min_x_coord = min(max(np.min(x_coord)-map_boundary, 0), min_x_coord)
-			max_x_coord = max(min(np.max(x_coord)+map_boundary, W-1), max_x_coord)
-			min_z_coord = min(max(np.min(z_coord)-map_boundary, 0), min_z_coord)
-			max_z_coord = max(min(np.max(z_coord)+map_boundary, H-1), max_z_coord)
-		
-		cropped_semantic_map = semantic_map[min_z_coord:max_z_coord+1, min_x_coord:max_x_coord+1]
-		color_semantic_map = apply_color_to_map(cropped_semantic_map)
+			# return the closest location on the free map
+			manhatten_dist = np.sum(np.absolute(free_map_coords - peak_pose), axis=1)
+			min_idx = np.argmin(manhatten_dist)
+			subgoal_coords = free_map_coords[min_idx]
+			subgoal_pose = pxl_coords_to_pose(subgoal_coords, self.pose_range, self.coords_range)
+			#print(f'subgoal_coords = {subgoal_coords}')
 
-		if idx % step_size == 0 or idx == len(img_names)-1:
-			# write the map with cv2 so the map image can be load directly
-			cv2.imwrite('{}/step_{}_semantic.jpg'.format(saved_folder, idx), color_semantic_map[:, :, ::-1])
+			'''
+			temp_occupancy_map = occupancy_map.copy()
+			temp_occupancy_map[subgoal_coords[1], subgoal_coords[0]] = 4
+			fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 100))
+			# visualize gt semantic map
+			ax.imshow(temp_occupancy_map, vmax=4)
+			ax.get_xaxis().set_visible(False)
+			ax.get_yaxis().set_visible(False)
+			ax.set_title('subgoal on the occupancy map')
+			plt.show()
+			'''
 
-			map_dict = {}
-			map_dict['min_x'] = min_x_coord
-			map_dict['max_x'] = max_x_coord
-			map_dict['min_z'] = min_z_coord
-			map_dict['max_z'] = max_z_coord
-			map_dict['min_X'] = min_X
-			map_dict['max_X'] = max_X
-			map_dict['min_Z'] = min_Z
-			map_dict['max_Z'] = max_Z
-			map_dict['semantic_map'] = semantic_map
-			print(f'semantic_map.shape = {semantic_map.shape}')
+			return subgoal_coords, subgoal_pose
 
-			np.save(f'{saved_folder}/step_{idx}_semantic.npy', map_dict)
-
-			#assert 1==2
-		'''
