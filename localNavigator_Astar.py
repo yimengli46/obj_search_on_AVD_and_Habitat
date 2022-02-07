@@ -166,10 +166,12 @@ class localNav_Astar:
 
 		# get a local map of the occupancy map
 		H, W = occupancy_map.shape
+		print(f'agent_coords = {agent_coords}, subgoal_coords = {subgoal_coords}')
 		(xmin, zmin, xmax, zmax), agent_local_coords, subgoal_local_coords = \
 			self._decide_local_map_size(agent_coords, subgoal_coords, H, W)
-
+		print(f'xmin = {xmin}, zmin = {zmin}, xmax = {xmax}, zmax = {zmax}')
 		local_occupancy_map = occupancy_map[zmin:zmax, xmin:xmax]
+		#local_occupancy_map = occupancy_map.copy()
 
 		'''
 		plt.imshow(local_occupancy_map)
@@ -182,7 +184,7 @@ class localNav_Astar:
 		map_coords = np.stack((xv, yv), axis=2).astype(np.int16)
 
 		# take the non-obj pixels
-		mask_free = (local_occupancy_map != 1)
+		mask_free = (local_occupancy_map != 5)
 		free_map_coords = map_coords[mask_free]
 
 		#===================== build the graph ======================
@@ -302,6 +304,7 @@ class localNav_Astar:
 		assert len(poses) == (len(actions) + 1)
 
 		self.path_idx = 1
+		self.path_pose_action = []
 		for i in range(0, len(poses)):
 			pose = poses[i]
 			# convert planner pose to environment pose
@@ -364,6 +367,10 @@ class localNav_Astar:
 
 		agent_local_coords = (agent_coords[0] - xmin, agent_coords[1] - zmin)
 		subgoal_local_coords = (subgoal_coords[0] - xmin, subgoal_coords[1] - zmin)
+		#agent_local_coords = agent_coords
+		#subgoal_local_coords = subgoal_coords
+		#xmin = 0
+		#zmin = 0
 
 		return (xmin, zmin, xmax, zmax), agent_local_coords, subgoal_local_coords
 

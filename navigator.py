@@ -26,8 +26,8 @@ flag_vis = False
 saved_folder = 'output/explore_PF_continuous'
 vis_observed_area_from_panorama = False
 flag_gt_semantic_map = True
-NUM_STEPS_EXPLORE = 30
-NUM_STEPS_vis = 1
+NUM_STEPS_EXPLORE = 50
+NUM_STEPS_vis = 10
 detector = 'PanopticSeg'
 THRESH_REACH = 0.5
 
@@ -174,8 +174,9 @@ while step < NUM_STEPS:
 	if MODE_FIND_SUBGOAL:
 		#PF.observeUpdate(observed_area_flag)
 		# get the peak global coordinates from particle filter
-		#peak_pose = PF.getPeak()
-		peak_pose = (7.38, 3.42)
+		peak_pose = PF.getPeak()
+		#assert 1==2
+		#peak_pose = (7.38, 3.42)
 		print(f'peak_pose = {peak_pose}')
 		MODE_FIND_SUBGOAL = False
 
@@ -192,7 +193,7 @@ while step < NUM_STEPS:
 	action, next_pose = LN.next_action(occupancy_map, env, 0.17)
 	print(f'action = {action}')
 	if action == "collision":
-		assert next_pose is None
+		#assert next_pose is None
 		# input next_pose is environment pose, not sem_map pose
 		semMap_module.add_occupied_cell_pose(next_pose)
 		# redo the planning

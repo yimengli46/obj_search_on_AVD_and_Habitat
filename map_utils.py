@@ -4,7 +4,7 @@ import cv2
 import matplotlib.pyplot as plt
 import math
 from math import cos, sin, acos, atan2, pi, floor
-from baseline_utils import project_pixels_to_world_coords, convertPanopSegToSSeg, apply_color_to_map
+from baseline_utils import project_pixels_to_world_coords, convertPanopSegToSSeg, apply_color_to_map, pose_to_coords
 from panoptic_prediction import PanopPred
 from baseline_utils import pose_to_coords_frame, pxl_coords_to_pose
 
@@ -136,7 +136,7 @@ class SemanticMap:
 		# add occupied cells
 		for pose in self.occupied_poses:
 			coords = pose_to_coords(pose, self.pose_range, self.coords_range, flag_cropped=False)
-			occupancy_map[coords[1], coords[0]] = 1
+			occupancy_map[coords[1], coords[0]] = 5
 
 		'''
 		temp_semantic_map = semantic_map[self.coords_range[1]:self.coords_range[3]+1, self.coords_range[0]:self.coords_range[2]+1]

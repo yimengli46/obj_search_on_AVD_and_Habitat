@@ -8,6 +8,7 @@ import cv2
 from math import floor, sqrt
 from sklearn.mixture import GaussianMixture
 from navigation_utils import change_brightness
+from matplotlib.colors import LogNorm
 
 mode = 'semantic_prior'
 flag_visualize_ins_weights = False
@@ -356,8 +357,8 @@ class ParticleFilter():
 			fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 120))
 			ax.get_xaxis().set_visible(False)
 			ax.get_yaxis().set_visible(False)
-			self.visualizeBelief(ax)
-			ax.scatter(peaks_coords[:, 0], peaks_coords[:, 1], s=30, c='white', zorder=3)
+			self.visualizeGMM(ax, gm)
+			ax.scatter(peaks_coords[:, 0], peaks_coords[:, 1], s=30, c='black', zorder=3)
 			# plot the selected peak in yellow
 			ax.scatter(peaks_coords[chosen_peak_idx, 0], peaks_coords[chosen_peak_idx, 1], s=50, c='yellow', zorder=4)
 			#fig.tight_layout()
@@ -370,6 +371,27 @@ class ParticleFilter():
 		# visualize the background
 		dist_map = np.zeros((self.H, self.W))
 		ax.imshow(dist_map)
+		# visualize the particles
+		particles = np.array(self.particles)
+		particle_coords = pose_to_coords_frame_numpy(particles, self.pose_range, self.coords_range)
+		ax.scatter(particle_coords[:, 0], particle_coords[:, 1], s=5, c='red', zorder=2)
+
+	def visualizeGMM(self, ax, gm):
+		# visualize the mixture contour
+		x = np.linspace(self.pose_range[0], self.pose_range[2])
+		y = np.linspace(self.pose_range[1], self.pose_range[3])
+		X, Y = np.meshgrid(x, y)
+		XX = np.array([X.ravel(), Y.ravel()]).T
+		print(f'XX.shape = {XX.shape}')
+		Z = -gm.score_samples(XX)
+		Z = Z.reshape(X.shape)
+
+		XX_coords = pose_to_coords_frame_numpy(XX, self.pose_range, self.coords_range)
+
+		CS = ax.contour(
+		    XX_coords[:, 0].reshape(X.shape), XX_coords[:, 1].reshape(X.shape), Z, norm=LogNorm(vmin=1.0, vmax=10000.0), levels=np.logspace(0, 3, 10)
+		)
+		#CB = ax.colorbar(CS, shrink=0.8, extend="both")
 		# visualize the particles
 		particles = np.array(self.particles)
 		particle_coords = pose_to_coords_frame_numpy(particles, self.pose_range, self.coords_range)
