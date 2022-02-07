@@ -24,6 +24,7 @@ class SemanticMap:
 		self.panop_pred = PanopPred()
 		self.pose_range = pose_range
 		self.coords_range = coords_range
+		self.occupied_poses = [] # detected during navigation
 
 		self.IGNORED_CLASS = [54] # ceiling class is ignored
 		self.UNDETECTED_PIXELS_CLASS = 59
@@ -132,6 +133,11 @@ class SemanticMap:
 		mask_explored_occupied_area = np.logical_and(observed_area_flag, occupancy_map==0)
 		occupancy_map[mask_explored_occupied_area] = 1 # occupied space index
 
+		# add occupied cells
+		for pose in self.occupied_poses:
+			coords = pose_to_coords(pose, self.pose_range, self.coords_range, flag_cropped=False)
+			occupancy_map[coords[1], coords[0]] = 1
+
 		'''
 		temp_semantic_map = semantic_map[self.coords_range[1]:self.coords_range[3]+1, self.coords_range[0]:self.coords_range[2]+1]
 		temp_occupancy_map = occupancy_map[self.coords_range[1]:self.coords_range[3]+1, self.coords_range[0]:self.coords_range[2]+1]
@@ -149,6 +155,10 @@ class SemanticMap:
 		'''
 
 		return semantic_map, observed_area_flag, occupancy_map
+
+	def add_occupied_cell_pose(self, pose):
+		agent_map_pose = (pose[0], -pose[1], -pose[2])
+		self.occupied_poses.append(agent_map_pose)
 
 	def find_subgoal(self, peak_pose, occupancy_map):
 		peak_coords = pose_to_coords_frame(peak_pose, self.pose_range, self.coords_range)

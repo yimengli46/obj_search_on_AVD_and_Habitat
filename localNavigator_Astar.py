@@ -1,8 +1,28 @@
 import numpy as np
 import matplotlib.pyplot as plt 
-from baseline_utils import pose_to_coords_frame, pose_to_coords, pxl_coords_to_pose
+from baseline_utils import pose_to_coords_frame, pose_to_coords, pxl_coords_to_pose, map_rot_to_planner_rot, planner_rot_to_map_rot
 import math
 import heapq as hq
+
+upper_thresh_theta = math.pi / 6
+lower_thresh_theta = math.pi / 12
+
+## result is in the range [-pi, pi]
+def minus_theta_fn (previous_theta, current_theta):
+	result = current_theta - previous_theta
+	if result < -math.pi:
+		result += 2 * math.pi
+	if result > math.pi:
+		result -= 2 * math.pi
+	return result
+
+def plus_theta_fn (previous_theta, current_theta):
+	result = current_theta + previous_theta
+	if result < -math.pi:
+		result += 2 * math.pi
+	if result > math.pi:
+		result -= 2 * math.pi
+	return result
 
 class Node():
 	def __init__(self, loc, parent, cost):
@@ -137,11 +157,12 @@ class localNav_Astar:
 		self.pose_range = pose_range
 		self.coords_range = coords_range
 		self.local_map_margin = 10
-		self.path_poses = None
+		self.path_pose_action = []
 		self.path_idx = -1 # record the index of the agent in the path
 
 	def plan(self, agent_pose, subgoal_coords, occupancy_map):
 		agent_coords = pose_to_coords(agent_pose, self.pose_range, self.coords_range)
+		#print(f'agent_coords = {agent_coords}')
 
 		# get a local map of the occupancy map
 		H, W = occupancy_map.shape
@@ -150,10 +171,10 @@ class localNav_Astar:
 
 		local_occupancy_map = occupancy_map[zmin:zmax, xmin:xmax]
 
-		#'''
+		'''
 		plt.imshow(local_occupancy_map)
 		plt.show()
-		#'''
+		'''
 		H, W = local_occupancy_map.shape
 		x = np.linspace(0, W-1, W)
 		y = np.linspace(0, H-1, H)
@@ -206,14 +227,95 @@ class localNav_Astar:
 		#'''
 
 		#============================== convert path to poses ===================
-		self.path_poses = []
-		self.path_idx = 1
+		poses = []
+		actions = []
+		points = []
+		
 		for loc in path:
 			pose = pxl_coords_to_pose((loc[0]+xmin, loc[1]+zmin), self.pose_range, self.coords_range)
-			self.path_poses.append(pose)
-		print(f'path_idx = {self.path_idx}, path_poses = {self.path_poses}')
+			points.append(pose)
 
-	def next_action(self, agent_pose, occupancy_map):
+		## compute theta for each point except the last one
+		## theta is in the range [-pi, pi]
+		thetas = []
+		for i in range(len(points) - 1):
+			p1 = points[i]
+			p2 = points[i + 1]
+			current_theta = math.atan2(p2[1]-p1[1], p2[0]-p1[0])
+			thetas.append(current_theta)
+
+		assert len(thetas) == len(points) - 1
+
+		# pose: (x, y, theta)
+		previous_theta = 0
+		for i in range(len(points) - 1):
+			p1 = points[i]
+			p2 = points[i+1]
+
+			current_theta = thetas[i]
+			## so that previous_theta is same as current_theta for the first point
+			if i == 0:
+				previous_theta = map_rot_to_planner_rot(agent_pose[2])
+			#print(f'previous_theta = {math.degrees(previous_theta)}, current_theta = {math.degrees(current_theta)}')
+			## first point is not the result of an action
+			## append an action before introduce a new pose
+			if i != 0:
+				## forward: 0, left: 3, right 2
+				actions.append("MOVE_FORWARD")
+			## after turning, previous theta is changed into current_theta
+			pose = (p1[0], p1[1], previous_theta)
+			poses.append(pose)
+			## first add turning points
+			## decide turn left or turn right, Flase = left, True = Right
+			bool_turn = False
+			minus_cur_pre_theta = minus_theta_fn(previous_theta, current_theta)
+			if minus_cur_pre_theta < 0:
+				bool_turn = True
+			## need to turn more than once, since each turn is 30 degree
+			while abs(minus_theta_fn(previous_theta, current_theta)) > upper_thresh_theta:
+				if bool_turn:
+					previous_theta = minus_theta_fn(upper_thresh_theta, previous_theta)
+					actions.append("TURN_RIGHT")
+				else:
+					previous_theta = plus_theta_fn(upper_thresh_theta, previous_theta)
+					actions.append("TURN_LEFT")
+				pose = (p1[0], p1[1], previous_theta)
+				poses.append(pose)
+			## add one more turning points when change of theta > 15 degree
+			if abs(minus_theta_fn(previous_theta, current_theta)) > lower_thresh_theta:
+				if bool_turn:
+					actions.append("TURN_RIGHT")
+				else:
+					actions.append("TURN_LEFT")
+				pose = (p1[0], p1[1], current_theta)
+				poses.append(pose)
+			## no need to change theta any more
+			previous_theta = current_theta
+			## then add forward points
+
+			## we don't need to add p2 to poses unless p2 is the last point in points
+			if i + 1 == len(points) - 1:
+				actions.append("MOVE_FORWARD")
+				pose = (p2[0], p2[1], current_theta)
+				poses.append(pose)
+		
+		assert len(poses) == (len(actions) + 1)
+
+		self.path_idx = 1
+		for i in range(0, len(poses)):
+			pose = poses[i]
+			# convert planner pose to environment pose
+			rot = -planner_rot_to_map_rot(pose[2])
+			new_pose = (pose[0], -pose[1], rot)
+			if i == 0:
+				action = ""
+			else:
+				action = actions[i-1]
+			self.path_pose_action.append((new_pose, action))
+
+		#print(f'path_idx = {self.path_idx}, path_pose_action = {self.path_pose_action}')
+
+	def next_action(self, occupancy_map, env, height):
 		'''
 		# visualize on occupancy map
 		path_pose = self.path_poses[-1]
@@ -234,32 +336,17 @@ class localNav_Astar:
 		plt.show()
 		'''
 
-		if self.path_idx >= len(self.path_poses):
-			return ""
+		if self.path_idx >= len(self.path_pose_action):
+			return "", None
 
-		# decide path_idx
-		self.stg_x, self.stg_z = self.path_poses[self.path_idx]
-		angle_st_goal = math.degrees(math.atan2(self.stg_x - agent_pose[0],
-												self.stg_z - agent_pose[1]))
-		angle_agent = (math.degrees(agent_pose[2])) % 360.0
-		if angle_agent > 180:
-			angle_agent -= 360
+		pose, action = self.path_pose_action[self.path_idx]
 
-		relative_angle = (angle_agent - angle_st_goal) % 360.0
-		if relative_angle > 180:
-			relative_angle -= 360
+		self.path_idx += 1
 
-		if relative_angle > 30 / 2.:
-			action = "TURN_LEFT"  # Right
-		elif relative_angle < -30 / 2.:
-			action = "TURN_RIGHT"  # Left
-		else:
-			action = "MOVE_FORWARD"  # Forward
-
-		if action == "MOVE_FORWARD":
-			self.path_idx += 1
-
-		return action
+		agent_pose = (pose[0], height, pose[1])
+		if not env.habitat_env.sim.is_navigable(agent_pose):
+			action = 'collision'
+		return action, pose
 
 	def _decide_local_map_size(self, agent_coords, subgoal_coords, H, W):
 		x1, z1 = agent_coords

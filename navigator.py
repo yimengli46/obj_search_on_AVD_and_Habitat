@@ -27,7 +27,7 @@ saved_folder = 'output/explore_PF_continuous'
 vis_observed_area_from_panorama = False
 flag_gt_semantic_map = True
 NUM_STEPS_EXPLORE = 30
-NUM_STEPS_vis = 10
+NUM_STEPS_vis = 1
 detector = 'PanopticSeg'
 THRESH_REACH = 0.5
 
@@ -90,8 +90,8 @@ while step < NUM_STEPS:
 	angle = phi
 	print(f'agent position = {agent_pos}, angle = {angle}')
 	pose = (agent_pos[0], agent_pos[2], angle)
-	traverse_lst.append(pose)
 	agent_map_pose = (pose[0], -pose[1], -pose[2])
+	traverse_lst.append(agent_map_pose)
 
 	# add the observed area
 	semMap_module.build_semantic_map(obs, pose)
@@ -136,12 +136,10 @@ while step < NUM_STEPS:
 		#=================================== visualize the agent pose as red nodes =======================
 		x_coord_lst, z_coord_lst, theta_lst = [], [], []
 		for cur_pose in traverse_lst:
-			x_coord, z_coord = pose_to_coords((cur_pose[0], -cur_pose[1]), pose_range, coords_range, cell_size=.1)
+			x_coord, z_coord = pose_to_coords((cur_pose[0], cur_pose[1]), pose_range, coords_range, cell_size=.1)
 			x_coord_lst.append(x_coord)
-			z_coord_lst.append(z_coord)
-			theta = -cur_pose[2]
-			rot = atan2(sin(theta), -cos(theta)) 			
-			theta_lst.append(rot)
+			z_coord_lst.append(z_coord)			
+			theta_lst.append(cur_pose[2])
 
 		#'''
 		fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(200, 200))
@@ -150,7 +148,7 @@ while step < NUM_STEPS:
 		ax[0][0].get_xaxis().set_visible(False)
 		ax[0][0].get_yaxis().set_visible(False)
 		#ax[0][0].scatter(x_coord_lst, z_coord_lst, s=30, c='red', zorder=2)
-		marker, scale = gen_arrow_head_marker(degrees(theta_lst[-1]))
+		marker, scale = gen_arrow_head_marker(theta_lst[-1])
 		ax[0][0].scatter(x_coord_lst[-1], z_coord_lst[-1], marker=marker, s=(30*scale)**2, c='red', zorder=2)
 		ax[0][0].plot(x_coord_lst, z_coord_lst, lw=5, c='blue', zorder=1)
 		ax[0][0].set_title('gt semantic map')
@@ -172,14 +170,13 @@ while step < NUM_STEPS:
 		#assert 1==2
 		#'''
 	
-	
 	#==================================== update particle filter =============================
 	if MODE_FIND_SUBGOAL:
 		#PF.observeUpdate(observed_area_flag)
 		# get the peak global coordinates from particle filter
-		peak_pose = PF.getPeak()
+		#peak_pose = PF.getPeak()
+		peak_pose = (7.38, 3.42)
 		print(f'peak_pose = {peak_pose}')
-		#peak_pose = (7.38, 3.42)
 		MODE_FIND_SUBGOAL = False
 
 		# peak is not subgoal
@@ -192,10 +189,23 @@ while step < NUM_STEPS:
 	#====================================== take next action ================================
 	step += 1
 	explore_steps += 1
-	#action = random.choice(["MOVE_FORWARD"])
-	action = LN.next_action(agent_map_pose, occupancy_map)
+	action, next_pose = LN.next_action(occupancy_map, env, 0.17)
 	print(f'action = {action}')
-	if action == "":
+	if action == "collision":
+		assert next_pose is None
+		# input next_pose is environment pose, not sem_map pose
+		semMap_module.add_occupied_cell_pose(next_pose)
+		# redo the planning
+		print(f'redo planning')
+		_, _, occupancy_map = semMap_module.get_semantic_map()
+		LN.plan(agent_map_pose, subgoal_coords, occupancy_map)
+		# do not take any actions
+	elif action == "": # finished navigating to the subgoal
 		MODE_FIND_SUBGOAL = True
 	else:
-		obs = env.step(action)[0]
+		print(f'next_pose = {next_pose}')
+		agent_pos = np.array([next_pose[0], 0.17, next_pose[1]])
+		# output rot is negative of the input angle
+		agent_rot = habitat_sim.utils.common.quat_from_angle_axis(-next_pose[2], habitat_sim.geo.GRAVITY)
+		obs = env.habitat_env.sim.get_observations_at(agent_pos, agent_rot, keep_agent_at_new_pose=True)
+

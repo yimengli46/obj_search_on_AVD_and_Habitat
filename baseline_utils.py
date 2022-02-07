@@ -350,7 +350,7 @@ def gen_arrow_head_marker(rot):
     Parameters
     ----------
     rot : float
-        rotation in degree
+        rotation in radian
         0 is positive x direction
 
     Returns
@@ -362,6 +362,13 @@ def gen_arrow_head_marker(rot):
         with the same size independent of their rotation.
         Paths are autoscaled to a box of size -1 <= x, y <= 1 by plt.scatter
     """
+
+    # rotate the rot to the marker's coordinate system
+    rotate_rot = rot - .5*pi
+    #print(f'rot in drawing is {math.degrees(rot)}, rotate_rot is {math.degrees(rotate_rot)}')
+    rot = math.degrees(rotate_rot)
+    #print(f'visualized angle = {rot}')
+
     arr = np.array([[.1, .3], [.1, -.3], [1, 0]])  # arrow shape
     angle = rot / 180 * np.pi
     rot_mat = np.array([
@@ -379,3 +386,11 @@ def gen_arrow_head_marker(rot):
 
     arrow_head_marker = mpl.path.Path(arr)
     return arrow_head_marker, scale
+
+def map_rot_to_planner_rot(rot):
+  rotate_rot = -rot + .5 * pi
+  return rotate_rot
+
+def planner_rot_to_map_rot(rot):
+  rotate_rot = -(rot - .5 * pi)
+  return rotate_rot
