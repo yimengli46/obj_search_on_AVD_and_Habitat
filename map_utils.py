@@ -133,10 +133,13 @@ class SemanticMap:
 		mask_explored_occupied_area = np.logical_and(observed_area_flag, occupancy_map==0)
 		occupancy_map[mask_explored_occupied_area] = 1 # occupied space index
 
+		occupancy_map = occupancy_map[self.coords_range[1]:self.coords_range[3]+1, self.coords_range[0]:self.coords_range[2]+1]
+
 		# add occupied cells
 		for pose in self.occupied_poses:
-			coords = pose_to_coords(pose, self.pose_range, self.coords_range, flag_cropped=False)
-			occupancy_map[coords[1], coords[0]] = 5
+			coords = pose_to_coords(pose, self.pose_range, self.coords_range, flag_cropped=True)
+			print(f'coords = {coords}')
+			occupancy_map[coords[1], coords[0]] = 1
 
 		'''
 		temp_semantic_map = semantic_map[self.coords_range[1]:self.coords_range[3]+1, self.coords_range[0]:self.coords_range[2]+1]
@@ -160,41 +163,5 @@ class SemanticMap:
 		agent_map_pose = (pose[0], -pose[1], -pose[2])
 		self.occupied_poses.append(agent_map_pose)
 
-	def find_subgoal(self, peak_pose, occupancy_map):
-		peak_coords = pose_to_coords_frame(peak_pose, self.pose_range, self.coords_range)
-
-		H, W = occupancy_map.shape
-		x = np.linspace(0, W-1, W)
-		y = np.linspace(0, H-1, H)
-		xv, yv = np.meshgrid(x, y)
-		map_coords = np.stack((xv, yv), axis=2).astype(np.int16)
-
-		# take the non-obj pixels
-		mask_free = (occupancy_map > 1)
-		free_map_coords = map_coords[mask_free]
-
-		if free_map_coords.shape[0] == 0:
-			print(f'no free space cells on the occupancy map')
-			return peak_coords, peak_pose
-		else:
-			# return the closest location on the free map
-			manhatten_dist = np.sum(np.absolute(free_map_coords - peak_pose), axis=1)
-			min_idx = np.argmin(manhatten_dist)
-			subgoal_coords = free_map_coords[min_idx]
-			subgoal_pose = pxl_coords_to_pose(subgoal_coords, self.pose_range, self.coords_range)
-			#print(f'subgoal_coords = {subgoal_coords}')
-
-			'''
-			temp_occupancy_map = occupancy_map.copy()
-			temp_occupancy_map[subgoal_coords[1], subgoal_coords[0]] = 4
-			fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 100))
-			# visualize gt semantic map
-			ax.imshow(temp_occupancy_map, vmax=4)
-			ax.get_xaxis().set_visible(False)
-			ax.get_yaxis().set_visible(False)
-			ax.set_title('subgoal on the occupancy map')
-			plt.show()
-			'''
-
-			return subgoal_coords, subgoal_pose
+	
 

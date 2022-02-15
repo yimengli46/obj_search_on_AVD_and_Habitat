@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from baseline_utils import pose_to_coords_frame, pose_to_coords, pxl_coords_to_pose, map_rot_to_planner_rot, planner_rot_to_map_rot
 import math
 import heapq as hq
+from collections import deque
 
 upper_thresh_theta = math.pi / 6
 lower_thresh_theta = math.pi / 12
@@ -83,6 +84,7 @@ class TreeList():
 
 		return locs[::-1]
 
+
 class PriorityQueue:
 	"""
 	  Implements a priority queue data structure. Each inserted item
@@ -121,6 +123,26 @@ class PriorityQueue:
 		else:
 			self.push(item, priority)
 
+def breadthFirstSearch(start_coords, graph):
+	"""Search the shallowest nodes in the search tree first."""
+	visited = []
+	Q = deque()
+	
+	node = start_coords
+	Q.append(node)
+
+	while True:
+		if len(Q) == 0:
+			return visited
+		else:
+			node = Q.popleft()
+			if node in graph:
+				# check its successors
+				for nei in graph[node]:
+					if nei not in visited and nei not in Q:
+						Q.append(nei)
+			visited.append(node)
+
 def AStarSearch(start_coords, goal_coords, graph):
 	tree = TreeList()
 	visited = []
@@ -138,37 +160,69 @@ def AStarSearch(start_coords, goal_coords, graph):
 
 		node_loc = Q.pop()
 		node = tree.getNode(node_loc)
-		if node.loc == goal_coords:
+		if (node.loc == goal_coords).all():
 			path = tree.formPath(node_loc)
 			return path
 		else:
-			for nei in graph[node_loc]:
-				new_node = Node(nei, node, 1 + node.cost)
-				tree.insertNode(new_node)
-				if nei not in visited:
-					heur = abs(nei[0] - goal_coords[0]) + abs(nei[1] - goal_coords[1])
-					# update Q
-					Q.update(nei, new_node.cost + heur)
-			# add node to visited
-			visited.append(node_loc)
+			if node_loc in graph:
+				for nei in graph[node_loc]:
+					dist = math.sqrt((nei[0] - node_loc[0])**2 + (nei[1] - node_loc[1])**2)
+					new_node = Node(nei, node, dist + node.cost)
+					tree.insertNode(new_node)
+					if nei not in visited:
+						heur = math.sqrt((nei[0] - goal_coords[0])**2 + (nei[1] - goal_coords[1])**2)
+						# update Q
+						Q.update(nei, new_node.cost + heur)
+				# add node to visited
+				visited.append(node_loc)
 
 class localNav_Astar:
 	def __init__(self, pose_range, coords_range):
 		self.pose_range = pose_range
 		self.coords_range = coords_range
-		self.local_map_margin = 10
+		self.local_map_margin = 30
 		self.path_pose_action = []
 		self.path_idx = -1 # record the index of the agent in the path
 
-	def plan(self, agent_pose, subgoal_coords, occupancy_map):
+	'''
+	def find_subgoal(self, peak_pose, occupancy_map):
+		peak_coords = pose_to_coords_frame(peak_pose, self.pose_range, self.coords_range)
+
+		H, W = occupancy_map.shape
+		x = np.linspace(0, W-1, W)
+		y = np.linspace(0, H-1, H)
+		xv, yv = np.meshgrid(x, y)
+		map_coords = np.stack((xv, yv), axis=2).astype(np.int16)
+
+		# take the non-obj pixels
+		mask_free = (occupancy_map > 1)
+		free_map_coords = map_coords[mask_free]
+
+		if free_map_coords.shape[0] == 0:
+			print(f'no free space cells on the occupancy map')
+			return peak_coords, peak_pose
+		else:
+			# return the closest location on the free map
+			manhatten_dist = np.sum(np.absolute(free_map_coords - peak_pose), axis=1)
+			min_idx = np.argmin(manhatten_dist)
+			subgoal_coords = free_map_coords[min_idx]
+			subgoal_pose = pxl_coords_to_pose(subgoal_coords, self.pose_range, self.coords_range)
+			#print(f'subgoal_coords = {subgoal_coords}')
+
+			return subgoal_coords, subgoal_pose
+	'''
+
+	def plan(self, peak_pose, agent_pose, occupancy_map):
 		agent_coords = pose_to_coords(agent_pose, self.pose_range, self.coords_range)
+		peak_coords = pose_to_coords(peak_pose, self.pose_range, self.coords_range)
 		#print(f'agent_coords = {agent_coords}')
 
+		#================================ find a reachable subgoal on the map ==============================
 		# get a local map of the occupancy map
 		H, W = occupancy_map.shape
-		print(f'agent_coords = {agent_coords}, subgoal_coords = {subgoal_coords}')
-		(xmin, zmin, xmax, zmax), agent_local_coords, subgoal_local_coords = \
-			self._decide_local_map_size(agent_coords, subgoal_coords, H, W)
+		print(f'agent_coords = {agent_coords}, peak_coords = {peak_coords}')
+		(xmin, zmin, xmax, zmax), agent_local_coords, peak_local_coords = \
+			self._decide_local_map_size(agent_coords, peak_coords, H, W)
 		print(f'xmin = {xmin}, zmin = {zmin}, xmax = {xmax}, zmax = {zmax}')
 		local_occupancy_map = occupancy_map[zmin:zmax, xmin:xmax]
 		#local_occupancy_map = occupancy_map.copy()
@@ -184,8 +238,12 @@ class localNav_Astar:
 		map_coords = np.stack((xv, yv), axis=2).astype(np.int16)
 
 		# take the non-obj pixels
-		mask_free = (local_occupancy_map != 5)
+		mask_free = (local_occupancy_map != 1)
 		free_map_coords = map_coords[mask_free]
+
+		if free_map_coords.shape[0] == 0:
+			print(f'no free space cells on the occupancy map')
+			assert 1==2
 
 		#===================== build the graph ======================
 		roadmap = {}
@@ -193,18 +251,45 @@ class localNav_Astar:
 		for i in range(num_nodes):
 			neighbors = []
 			x, y = free_map_coords[i]
+			# bottom
 			if y+1 < H and mask_free[y+1, x]:
 				neighbors.append((x, y+1))
+			# top
 			if y-1 >= 0 and mask_free[y-1, x]:
 				neighbors.append((x, y-1))
+			# left
 			if x-1 >= 0 and mask_free[y, x-1]:
 				neighbors.append((x-1, y))
+			# right
 			if x+1 < W and mask_free[y, x+1]:
 				neighbors.append((x+1, y))
+			# top left
+			if x-1 >= 0 and y-1 >= 0 and mask_free[y-1, x-1]:
+				neighbors.append((x-1, y-1))
+			# top right
+			if x+1 < W and y-1 >= 0 and mask_free[y-1, x+1]:
+				neighbors.append((x+1, y-1))
+			# bottom left
+			if x-1 >= 0 and y+1 < H and mask_free[y+1, x-1]:
+				neighbors.append((x-1, y+1))
+			# bottom right
+			if x+1 < W and y+1 < H and mask_free[y+1, x+1]:
+				neighbors.append((x+1, y+1))
 
 			roadmap[tuple(free_map_coords[i])] = neighbors
 
 		#print(f'roadmap = {roadmap}')
+		#===================== find the subgoal (closest to peak and reachable from agent)
+		reachable_locs = breadthFirstSearch(agent_local_coords, roadmap)
+		reachable_locs = np.array(list(map(list, reachable_locs)))
+		# return the closest location on the free map
+		manhatten_dist = np.sum(np.absolute(reachable_locs - peak_local_coords), axis=1)
+		min_idx = np.argmin(manhatten_dist)
+		subgoal_local_coords = reachable_locs[min_idx]
+		subgoal_coords = (subgoal_local_coords[0]+xmin, subgoal_local_coords[1]+zmin)
+		subgoal_pose = pxl_coords_to_pose(subgoal_coords, self.pose_range, self.coords_range)
+
+		#===================== Using A* to navigate to the subgoal
 		path = AStarSearch(agent_local_coords, subgoal_local_coords, roadmap)
 		#print(f'path = {path}')
 
@@ -213,6 +298,9 @@ class localNav_Astar:
 		mask_new = mask_free.astype(np.int16)
 		for loc in path:
 			mask_new[loc[1], loc[0]] = 2
+		mask_new[agent_local_coords[1], agent_local_coords[0]] = 3 # agent cell
+		mask_new[subgoal_local_coords[1], subgoal_local_coords[0]] = 4 # subgoal cell
+		mask_new[peak_local_coords[1], peak_local_coords[0]] = 5 # peak cell
 		
 		fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(200, 100))
 		# visualize gt semantic map
@@ -236,6 +324,10 @@ class localNav_Astar:
 		for loc in path:
 			pose = pxl_coords_to_pose((loc[0]+xmin, loc[1]+zmin), self.pose_range, self.coords_range)
 			points.append(pose)
+
+		if len(points) == 1:
+			print(f'agent is at the subgoal, need to find a new peak')
+			assert 1==2
 
 		## compute theta for each point except the last one
 		## theta is in the range [-pi, pi]
@@ -317,6 +409,7 @@ class localNav_Astar:
 			self.path_pose_action.append((new_pose, action))
 
 		#print(f'path_idx = {self.path_idx}, path_pose_action = {self.path_pose_action}')
+		return subgoal_coords, subgoal_pose
 
 	def next_action(self, occupancy_map, env, height):
 		'''

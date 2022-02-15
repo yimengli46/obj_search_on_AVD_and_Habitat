@@ -26,7 +26,7 @@ flag_vis = False
 saved_folder = 'output/explore_PF_continuous'
 vis_observed_area_from_panorama = False
 flag_gt_semantic_map = True
-NUM_STEPS_EXPLORE = 50
+NUM_STEPS_EXPLORE = 30
 NUM_STEPS_vis = 10
 detector = 'PanopticSeg'
 THRESH_REACH = 0.5
@@ -69,7 +69,7 @@ if False:
 
 #===================================== setup the start location ===============================#
 obs = env.reset()
-agent_pos = np.array([6.6, 0.17, -6.9])
+agent_pos = np.array([6.6, 0.17, -6.9]) # (6.6, -6.9), (3.6, -4.5)
 agent_rot = habitat_sim.utils.common.quat_from_angle_axis(2.36, habitat_sim.geo.GRAVITY)
 obs = env.habitat_env.sim.get_observations_at(agent_pos, agent_rot, keep_agent_at_new_pose=True)
 
@@ -131,7 +131,7 @@ while step < NUM_STEPS:
 		color_built_semantic_map = apply_color_to_map(built_semantic_map)
 		color_built_semantic_map = change_brightness(color_built_semantic_map, observed_area_flag, value=60)
 
-		occupancy_map = occupancy_map[coords_range[1]:coords_range[3]+1, coords_range[0]:coords_range[2]+1]
+		#occupancy_map = occupancy_map[coords_range[1]:coords_range[3]+1, coords_range[0]:coords_range[2]+1]
 
 		#=================================== visualize the agent pose as red nodes =======================
 		x_coord_lst, z_coord_lst, theta_lst = [], [], []
@@ -151,6 +151,8 @@ while step < NUM_STEPS:
 		marker, scale = gen_arrow_head_marker(theta_lst[-1])
 		ax[0][0].scatter(x_coord_lst[-1], z_coord_lst[-1], marker=marker, s=(30*scale)**2, c='red', zorder=2)
 		ax[0][0].plot(x_coord_lst, z_coord_lst, lw=5, c='blue', zorder=1)
+		if subgoal_coords is not None:
+			ax[0][0].scatter(subgoal_coords[0], subgoal_coords[1], marker='*', s=50, c='yellow', zorder=3)
 		ax[0][0].set_title('gt semantic map')
 		# visualize built semantic map
 		ax[0][1].imshow(color_built_semantic_map)
@@ -181,11 +183,9 @@ while step < NUM_STEPS:
 		MODE_FIND_SUBGOAL = False
 
 		# peak is not subgoal
-		# subgoal is the closest free position/coordinates to the peak on the occupancy map
-		subgoal_coords, subgoal_pose = semMap_module.find_subgoal(peak_pose, occupancy_map)
+		# subgoal is the closest/reachable(bfs) free position/coordinates to the peak on the occupancy map
+		subgoal_coords, subgoal_pose = LN.plan(peak_pose, agent_map_pose, occupancy_map)
 		print(f'subgoal_coords = {subgoal_coords}')
-		LN.plan(agent_map_pose, subgoal_coords, occupancy_map)
-		#assert 1==2
 		
 	#====================================== take next action ================================
 	step += 1
@@ -199,7 +199,14 @@ while step < NUM_STEPS:
 		# redo the planning
 		print(f'redo planning')
 		_, _, occupancy_map = semMap_module.get_semantic_map()
-		LN.plan(agent_map_pose, subgoal_coords, occupancy_map)
+		fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 100))
+		ax.imshow(occupancy_map, vmax=5)
+		ax.get_xaxis().set_visible(False)
+		ax.get_yaxis().set_visible(False)
+		plt.title('collision occupancy_map')
+		plt.show()
+		
+		subgoal_coords, subgoal_pose = LN.plan(peak_pose, agent_map_pose, occupancy_map)
 		# do not take any actions
 	elif action == "": # finished navigating to the subgoal
 		MODE_FIND_SUBGOAL = True
