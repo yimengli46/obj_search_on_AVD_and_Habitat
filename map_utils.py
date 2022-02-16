@@ -34,6 +34,9 @@ class SemanticMap:
 		self.img_names = list(self.img_act_dict.keys())
 		self.id2class_mapper = np.load('configs/COCO_PanopticSeg_labels_dict.npy', allow_pickle=True).item()
 
+		# load occupancy map
+				
+
 		self.min_X = 1000.0
 		self.max_X = -1000.0
 		self.min_Z = 1000.0
