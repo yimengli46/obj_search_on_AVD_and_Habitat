@@ -11,9 +11,9 @@ from navigation_utils import change_brightness
 from matplotlib.colors import LogNorm
 
 mode = 'semantic_prior'
-flag_visualize_ins_weights = False
+flag_visualize_ins_weights = True
 flag_visualize_peaks = True
-flag_visualize_detected_centers = False
+flag_visualize_detected_centers = True
 
 cat2idx_dict = get_class_mapper()
 idx2cat_dict = {v: k for k, v in cat2idx_dict.items()}
@@ -206,8 +206,8 @@ class ParticleFilter():
 	"""
 	A particle filter for approximately tracking a single ghost.
 	"""
-	def __init__(self, numParticles, semantic_map, pose_range, coords_range):
-		self.k2 = 'refrigerator'
+	def __init__(self, target_cat, numParticles, semantic_map, pose_range, coords_range):
+		self.k2 = target_cat
 		self.H, self.W = semantic_map.shape[:2]
 		self.numParticles = numParticles
 		self.semantic_map = semantic_map
@@ -234,7 +234,7 @@ class ParticleFilter():
 		#print(f'particles.shape = {particles.shape}')
 		self.particles = list(map(tuple, particles))
 
-	def observeUpdate(self, observed_area_flag):
+	def observeUpdate(self, observed_area_flag, step, saved_folder):
 		"""
 		Update beliefs based on the distance observation and Pacman's position.
 
@@ -263,7 +263,7 @@ class ParticleFilter():
 
 		#=============================== visualize detected instance centers ======================
 		if flag_visualize_detected_centers:
-			fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 120))
+			fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 12))
 			ax.imshow(color_semantic_map)
 			ax.get_xaxis().set_visible(False)
 			ax.get_yaxis().set_visible(False)
@@ -276,16 +276,20 @@ class ParticleFilter():
 			ax.scatter(x_coord_lst, z_coord_lst, s=30, c='white', zorder=2)
 			#fig.tight_layout()
 			plt.title('visualize detected instance centers')
-			plt.show()
+			#plt.show()
+			fig.savefig(f'{saved_folder}/step_{step}_detected_centers.jpg')
+			plt.close()
 		
 		#========================================= Compute Priors ===========================================
 		for idx, inst in enumerate(list_instances):
 			inst_pose = pxl_coords_to_pose(inst['center'], self.pose_range, self.coords_range, flag_cropped=True)
 			k1 = idx2cat_dict[inst['cat']]
 			if k1 == self.k2: # target object is detected
+				weight_k1 = 1.
 				visualize_GMM_dist(weight_k1, inst['size'], inst_pose, self.particles, weights, flag_target=True)
 			else:
 				weight_k1 = get_cooccurred_object_weight(self.k2, k1)
+				print(f'weight_k1 = {weight_k1}, k1 = {k1}, k2 = {self.k2}')
 				# load GMM
 				if weight_k1 > 0:
 					visualize_GMM_dist(weight_k1, inst['size'], inst_pose, self.particles, weights)
@@ -295,7 +299,7 @@ class ParticleFilter():
 			color_semantic_map = apply_color_to_map(semantic_map)
 			color_semantic_map = change_brightness(color_semantic_map, observed_area_flag, value=60)
 
-			fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(200, 90))
+			fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20, 9))
 			ax[0].imshow(color_semantic_map)
 			ax[0].get_xaxis().set_visible(False)
 			ax[0].get_yaxis().set_visible(False)
@@ -323,7 +327,7 @@ class ParticleFilter():
 			color_semantic_map = apply_color_to_map(semantic_map)
 			color_semantic_map = change_brightness(color_semantic_map, observed_area_flag, value=60)
 
-			fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(200, 90))
+			fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20, 9))
 			ax[0].imshow(color_semantic_map)
 			ax[0].get_xaxis().set_visible(False)
 			ax[0].get_yaxis().set_visible(False)
@@ -334,7 +338,10 @@ class ParticleFilter():
 			ax[1].get_yaxis().set_visible(False)
 			#fig.tight_layout()
 			plt.title('particle weights after weight normalization (color denotes weight)')
-			plt.show()
+			#plt.show()
+			fig.savefig(f'{saved_folder}/step_{step}_particle_weights.jpg')
+			plt.close()
+
 
 		if weights.total() == 0: # corner case
 			self.initializeUniformly()
@@ -343,7 +350,7 @@ class ParticleFilter():
 			print(f'len(poses) = {len(poses)}')
 			self.particles = poses
 
-	def getPeak(self):
+	def getPeak(self, step, saved_folder):
 		#===================================== finding the peak ================================
 		gm = self.findPeak()
 		peaks_poses = gm.means_
@@ -354,7 +361,7 @@ class ParticleFilter():
 		
 		#===================================== visualize particles and the peak =============================
 		if flag_visualize_peaks:
-			fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 120))
+			fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 12))
 			ax.get_xaxis().set_visible(False)
 			ax.get_yaxis().set_visible(False)
 			self.visualizeGMM(ax, gm)
@@ -363,7 +370,9 @@ class ParticleFilter():
 			ax.scatter(peaks_coords[chosen_peak_idx, 0], peaks_coords[chosen_peak_idx, 1], s=50, c='yellow', zorder=4)
 			#fig.tight_layout()
 			plt.title('particles (white nodes are peaks of Gaussian components, yellow node is the chosen peak)')
-			plt.show()
+			#plt.show()
+			fig.savefig(f'{saved_folder}/step_{step}_peak.jpg')
+			plt.close()
 
 		return chosen_peak_pose
 

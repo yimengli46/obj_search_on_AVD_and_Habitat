@@ -212,7 +212,7 @@ class localNav_Astar:
 			return subgoal_coords, subgoal_pose
 	'''
 
-	def plan(self, peak_pose, agent_pose, occupancy_map):
+	def plan(self, peak_pose, agent_pose, occupancy_map, step, saved_folder):
 		agent_coords = pose_to_coords(agent_pose, self.pose_range, self.coords_range)
 		peak_coords = pose_to_coords(peak_pose, self.pose_range, self.coords_range)
 		#print(f'agent_coords = {agent_coords}')
@@ -302,7 +302,7 @@ class localNav_Astar:
 		mask_new[subgoal_local_coords[1], subgoal_local_coords[0]] = 4 # subgoal cell
 		mask_new[peak_local_coords[1], peak_local_coords[0]] = 5 # peak cell
 		
-		fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(200, 100))
+		fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20, 10))
 		# visualize gt semantic map
 		ax[0].imshow(local_occupancy_map)
 		ax[0].get_xaxis().set_visible(False)
@@ -313,7 +313,10 @@ class localNav_Astar:
 		ax[1].get_xaxis().set_visible(False)
 		ax[1].get_yaxis().set_visible(False)
 		ax[1].set_title('planned path')
-		plt.show()
+		#plt.show()
+		fig.savefig(f'{saved_folder}/step_{step}_localPlanner.jpg')
+		plt.close()
+
 		#'''
 
 		#============================== convert path to poses ===================
@@ -338,7 +341,8 @@ class localNav_Astar:
 			current_theta = math.atan2(p2[1]-p1[1], p2[0]-p1[0])
 			thetas.append(current_theta)
 
-		assert len(thetas) == len(points) - 1
+		print(f'len(thetas) = {len(thetas)}, len(points) = {len(points)}')
+		#assert len(thetas) == len(points) - 1
 
 		# pose: (x, y, theta)
 		previous_theta = 0
@@ -393,7 +397,7 @@ class localNav_Astar:
 				pose = (p2[0], p2[1], current_theta)
 				poses.append(pose)
 		
-		assert len(poses) == (len(actions) + 1)
+		# assert len(poses) == (len(actions) + 1)
 
 		self.path_idx = 1
 		self.path_pose_action = []

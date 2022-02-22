@@ -10,10 +10,10 @@ from baseline_utils import pose_to_coords_frame, pxl_coords_to_pose
 
 
 class SemanticMap:
-	def __init__(self, pose_range, coords_range):
+	def __init__(self, scene_name, pose_range, coords_range):
 
 		self.dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
-		self.scene_name = 'Allensville_0'
+		self.scene_name = scene_name
 		self.cell_size = 0.1
 		self.UNIGNORED_CLASS = []
 		self.saved_folder = 'results'
@@ -35,7 +35,8 @@ class SemanticMap:
 		self.id2class_mapper = np.load('configs/COCO_PanopticSeg_labels_dict.npy', allow_pickle=True).item()
 
 		# load occupancy map
-				
+		occ_map_path = f'output/semantic_map/{self.scene_name}'
+		self.occupancy_map = np.load(f'{occ_map_path}/BEV_occupancy_map.npy')
 
 		self.min_X = 1000.0
 		self.max_X = -1000.0
@@ -63,7 +64,7 @@ class SemanticMap:
 		self.four_dim_grid = np.zeros((len(self.z_grid), 2000, len(self.x_grid), 60), dtype=np.int16) # x, y, z, C
 		self.H, self.W = len(self.z_grid), len(self.x_grid)
 
-	def build_semantic_map(self, obs, pose):
+	def build_semantic_map(self, obs, pose, step=0, saved_folder=''):
 		# load rgb image, depth and sseg
 		rgb_img = obs['rgb']
 		depth_img = 5. * obs['depth']
@@ -91,7 +92,9 @@ class SemanticMap:
 			ax[2].get_yaxis().set_visible(False)
 			ax[2].set_title("depth")
 			fig.tight_layout()
-			plt.show()
+			#plt.show()
+			fig.savefig(f'{saved_folder}/step_{step}_obs.jpg')
+			plt.close()
 		#'''
 
 		xyz_points, sseg_points = project_pixels_to_world_coords(sseg_img, depth_img, sem_map_pose, gap=2, ignored_classes=self.IGNORED_CLASS)
@@ -129,6 +132,7 @@ class SemanticMap:
 		observed_area_flag = (grid_sum_cat > 0)
 
 		# get occupancy map
+		'''
 		occupancy_map = np.zeros(semantic_map.shape, dtype=np.int8)
 		occupancy_map = np.where(semantic_map==57, 3, occupancy_map) # floor index 57, free space index 3
 		occupancy_map = np.where(semantic_map==self.UNDETECTED_PIXELS_CLASS, 2, occupancy_map) # explored but undetected area, index 2
@@ -137,11 +141,16 @@ class SemanticMap:
 		occupancy_map[mask_explored_occupied_area] = 1 # occupied space index
 
 		occupancy_map = occupancy_map[self.coords_range[1]:self.coords_range[3]+1, self.coords_range[0]:self.coords_range[2]+1]
+		'''
+
+		occupancy_map = self.occupancy_map.copy()
+		occupancy_map = np.where(occupancy_map==1, 3, occupancy_map) # free cell
+		occupancy_map = np.where(occupancy_map==0, 1, occupancy_map) # occupied cell
 
 		# add occupied cells
 		for pose in self.occupied_poses:
 			coords = pose_to_coords(pose, self.pose_range, self.coords_range, flag_cropped=True)
-			print(f'coords = {coords}')
+			print(f'occupied cell coords = {coords}')
 			occupancy_map[coords[1], coords[0]] = 1
 
 		'''
