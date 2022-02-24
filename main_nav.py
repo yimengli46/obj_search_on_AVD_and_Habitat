@@ -23,9 +23,9 @@ config.freeze()
 env = SimpleRLEnv(config=config)
 obs = env.reset()
 
-results = []
-#for idx, data in enumerate(testing_data):
-for idx in range(10):
+results = {}
+for idx, data in enumerate(testing_data):
+#for idx in range(2):
 	data = testing_data[idx]
 	print(f'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA EPS {idx} BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB')
 	start_pose, target_cat, targets = data
@@ -34,11 +34,20 @@ for idx in range(10):
 	saved_folder = f'{scene_output_folder}/eps_{idx}_{target_cat}'
 	create_folder(saved_folder, clean_up=True)
 	flag = False
+	steps = 0
 	try:
-		flag = nav(env, idx, scene_name, start_pose, targets, target_cat, saved_folder)
+		flag, steps = nav(env, idx, scene_name, start_pose, targets, target_cat, saved_folder)
 	except:
 		print(f'CCCCCCCCCCCCCC failed EPS {idx} DDDDDDDDDDDDDDD')
 
-	results.append(flag)
+	result = {}
+	result['eps_id'] = idx
+	result['target'] = target_cat
+	result['steps'] = steps
+	result['success'] = flag
+
+	results[idx] = result
+
+np.save(f'{output_folder}/results_{scene_name}', results)
 
 env.close()

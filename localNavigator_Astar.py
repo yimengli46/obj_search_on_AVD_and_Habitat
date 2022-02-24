@@ -295,27 +295,29 @@ class localNav_Astar:
 
 		#========================== visualize the path ==========================
 		#'''
-		mask_new = mask_free.astype(np.int16)
-		for loc in path:
-			mask_new[loc[1], loc[0]] = 2
-		mask_new[agent_local_coords[1], agent_local_coords[0]] = 3 # agent cell
-		mask_new[subgoal_local_coords[1], subgoal_local_coords[0]] = 4 # subgoal cell
-		mask_new[peak_local_coords[1], peak_local_coords[0]] = 5 # peak cell
-		
-		fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20, 10))
-		# visualize gt semantic map
-		ax[0].imshow(local_occupancy_map)
-		ax[0].get_xaxis().set_visible(False)
-		ax[0].get_yaxis().set_visible(False)
-		ax[0].set_title('local_occupancy_map')
-		# visualize built semantic map
-		ax[1].imshow(mask_new, vmin=0, vmax=5)
-		ax[1].get_xaxis().set_visible(False)
-		ax[1].get_yaxis().set_visible(False)
-		ax[1].set_title('planned path')
-		#plt.show()
-		fig.savefig(f'{saved_folder}/step_{step}_localPlanner.jpg')
-		plt.close()
+		if False:
+			mask_new = mask_free.astype(np.int16)
+			for loc in path:
+				mask_new[loc[1], loc[0]] = 2
+			mask_new[agent_local_coords[1], agent_local_coords[0]] = 3 # agent cell
+			mask_new[subgoal_local_coords[1], subgoal_local_coords[0]] = 4 # subgoal cell
+			mask_new[peak_local_coords[1], peak_local_coords[0]] = 5 # peak cell
+			
+
+			fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20, 10))
+			# visualize gt semantic map
+			ax[0].imshow(local_occupancy_map)
+			ax[0].get_xaxis().set_visible(False)
+			ax[0].get_yaxis().set_visible(False)
+			ax[0].set_title('local_occupancy_map')
+			# visualize built semantic map
+			ax[1].imshow(mask_new, vmin=0, vmax=5)
+			ax[1].get_xaxis().set_visible(False)
+			ax[1].get_yaxis().set_visible(False)
+			ax[1].set_title('planned path')
+			#plt.show()
+			fig.savefig(f'{saved_folder}/step_{step}_localPlanner.jpg')
+			plt.close()
 
 		#'''
 

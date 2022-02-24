@@ -21,7 +21,7 @@ def nav(env, episode_id, scene_name, start_pose, targets, target_cat, saved_fold
 	dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
 	#scene_name = 'Allensville_0'
 	SEED = 10
-	NUM_STEPS = 100
+	NUM_STEPS = 301
 	cell_size = 0.1
 	flag_vis = False
 	#saved_folder = 'output/TEST_RESULTS'
@@ -115,7 +115,7 @@ def nav(env, episode_id, scene_name, start_pose, targets, target_cat, saved_fold
 					if dist_subgoal_to_goal <= 1. + GOAL_size:
 						print(f'==========================REACH THE GOAL =============================')
 						MODE_FIND_GOAL = True
-						return MODE_FIND_GOAL
+						return MODE_FIND_GOAL, step
 						break
 
 			# condition 2: run out of exploration steps
@@ -239,5 +239,5 @@ def nav(env, episode_id, scene_name, start_pose, targets, target_cat, saved_fold
 			obs = env.habitat_env.sim.get_observations_at(agent_pos, agent_rot, keep_agent_at_new_pose=True)
 
 
-	return False
+	return False, step
 	

@@ -308,7 +308,7 @@ class ParticleFilter():
 			dist_map = self.visualizeWeights(weights, ax[1])
 			ax[1].get_xaxis().set_visible(False)
 			ax[1].get_yaxis().set_visible(False)
-			#fig.tight_layout()
+			# fig.tight_layout()
 			plt.title('particle weights before ignoring explored area (color denotes weight)')
 			plt.show()
 
@@ -338,7 +338,7 @@ class ParticleFilter():
 			ax[1].get_yaxis().set_visible(False)
 			#fig.tight_layout()
 			plt.title('particle weights after weight normalization (color denotes weight)')
-			#plt.show()
+			# plt.show()
 			fig.savefig(f'{saved_folder}/step_{step}_particle_weights.jpg')
 			plt.close()
 
@@ -353,7 +353,7 @@ class ParticleFilter():
 	def getPeak(self, step, saved_folder):
 		#===================================== finding the peak ================================
 		gm = self.findPeak()
-		peaks_poses = gm.means_
+		peaks_poses = gm.means_ # map pose
 		peaks_coords = pose_to_coords_frame_numpy(peaks_poses, self.pose_range, self.coords_range)
 		# choose peak with the largest weight
 		chosen_peak_idx = np.argmax(np.array(gm.weights_))
@@ -386,6 +386,10 @@ class ParticleFilter():
 		ax.scatter(particle_coords[:, 0], particle_coords[:, 1], s=5, c='red', zorder=2)
 
 	def visualizeGMM(self, ax, gm):
+		# The background dist_map is important for visualization. Otherwise the map is upside down.
+		dist_map = np.ones((self.H, self.W, 3), dtype=np.uint8)*255
+		ax.imshow(dist_map)
+		#'''
 		# visualize the mixture contour
 		x = np.linspace(self.pose_range[0], self.pose_range[2])
 		y = np.linspace(self.pose_range[1], self.pose_range[3])
@@ -400,6 +404,8 @@ class ParticleFilter():
 		CS = ax.contour(
 		    XX_coords[:, 0].reshape(X.shape), XX_coords[:, 1].reshape(X.shape), Z, norm=LogNorm(vmin=1.0, vmax=10000.0), levels=np.logspace(0, 3, 10)
 		)
+		#'''
+		
 		#CB = ax.colorbar(CS, shrink=0.8, extend="both")
 		# visualize the particles
 		particles = np.array(self.particles)
