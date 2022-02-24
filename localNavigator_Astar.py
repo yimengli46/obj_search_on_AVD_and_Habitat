@@ -313,9 +313,9 @@ class localNav_Astar:
 		ax[1].get_xaxis().set_visible(False)
 		ax[1].get_yaxis().set_visible(False)
 		ax[1].set_title('planned path')
-		plt.show()
-		#fig.savefig(f'{saved_folder}/step_{step}_localPlanner.jpg')
-		#plt.close()
+		#plt.show()
+		fig.savefig(f'{saved_folder}/step_{step}_localPlanner.jpg')
+		plt.close()
 
 		#'''
 

@@ -11,9 +11,9 @@ from navigation_utils import change_brightness
 from matplotlib.colors import LogNorm
 
 mode = 'semantic_prior'
-flag_visualize_ins_weights = True
+flag_visualize_ins_weights = False
 flag_visualize_peaks = True
-flag_visualize_detected_centers = True
+flag_visualize_detected_centers = False
 
 cat2idx_dict = get_class_mapper()
 idx2cat_dict = {v: k for k, v in cat2idx_dict.items()}

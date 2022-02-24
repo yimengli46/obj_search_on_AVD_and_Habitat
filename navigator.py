@@ -17,7 +17,7 @@ import habitat_sim
 from habitat.tasks.utils import cartesian_to_polar, quaternion_rotate_vector
 import random
 
-def nav(episode_id, scene_name, start_pose, targets, target_cat, saved_folder):
+def nav(env, episode_id, scene_name, start_pose, targets, target_cat, saved_folder):
 	dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
 	#scene_name = 'Allensville_0'
 	SEED = 10
@@ -47,16 +47,6 @@ def nav(episode_id, scene_name, start_pose, targets, target_cat, saved_folder):
 	semMap_module = SemanticMap(scene_name, pose_range, coords_range) # build the observed sem map
 	traverse_lst = []
 
-	#================================ load habitat env============================================
-	config = habitat.get_config(config_paths="/home/yimeng/Datasets/habitat-lab/configs/tasks/devendra_objectnav_gibson.yaml")
-	config.defrost()
-	config.DATASET.DATA_PATH = '/home/yimeng/Datasets/habitat-lab/data/datasets/objectnav/gibson/all.json.gz'
-	config.DATASET.SCENES_DIR = '/home/yimeng/Datasets/habitat-lab/data/scene_datasets/'
-	#config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
-	#config.TASK.SENSORS.append("HEADING_SENSOR")
-	config.freeze()
-	env = SimpleRLEnv(config=config)
-
 	#===================================== visualize initial particles ===============================
 	if False:
 		fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(100, 100))
@@ -69,7 +59,7 @@ def nav(episode_id, scene_name, start_pose, targets, target_cat, saved_folder):
 		#plt.close()
 
 	#===================================== setup the start location ===============================#
-	obs = env.reset()
+	
 	agent_pos = np.array([start_pose[0], 0.17, start_pose[1]]) # (6.6, -6.9), (3.6, -4.5)
 	agent_rot = habitat_sim.utils.common.quat_from_angle_axis(2.36, habitat_sim.geo.GRAVITY)
 	# check if the start point is navigable
@@ -125,6 +115,7 @@ def nav(episode_id, scene_name, start_pose, targets, target_cat, saved_folder):
 					if dist_subgoal_to_goal <= 1. + GOAL_size:
 						print(f'==========================REACH THE GOAL =============================')
 						MODE_FIND_GOAL = True
+						return MODE_FIND_GOAL
 						break
 
 			# condition 2: run out of exploration steps
@@ -247,4 +238,6 @@ def nav(episode_id, scene_name, start_pose, targets, target_cat, saved_folder):
 			agent_rot = habitat_sim.utils.common.quat_from_angle_axis(-next_pose[2], habitat_sim.geo.GRAVITY)
 			obs = env.habitat_env.sim.get_observations_at(agent_pos, agent_rot, keep_agent_at_new_pose=True)
 
-	env.close()
+
+	return False
+	
