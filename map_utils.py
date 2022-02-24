@@ -37,6 +37,8 @@ class SemanticMap:
 		# load occupancy map
 		occ_map_path = f'output/semantic_map/{self.scene_name}'
 		self.occupancy_map = np.load(f'{occ_map_path}/BEV_occupancy_map.npy')
+		#kernel = np.ones((5,5), np.uint8)
+		#self.occupancy_map = cv2.erode(occupancy_map.astype(np.uint8), kernel, iterations=1)
 
 		self.min_X = 1000.0
 		self.max_X = -1000.0

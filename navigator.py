@@ -21,7 +21,7 @@ def nav(episode_id, scene_name, start_pose, goal_poses, target_cat, saved_folder
 	dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
 	#scene_name = 'Allensville_0'
 	SEED = 10
-	NUM_STEPS = 300
+	NUM_STEPS = 100
 	cell_size = 0.1
 	flag_vis = False
 	#saved_folder = 'output/TEST_RESULTS'

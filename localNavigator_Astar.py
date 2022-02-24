@@ -309,17 +309,18 @@ class localNav_Astar:
 		ax[0].get_yaxis().set_visible(False)
 		ax[0].set_title('local_occupancy_map')
 		# visualize built semantic map
-		ax[1].imshow(mask_new)
+		ax[1].imshow(mask_new, vmin=0, vmax=5)
 		ax[1].get_xaxis().set_visible(False)
 		ax[1].get_yaxis().set_visible(False)
 		ax[1].set_title('planned path')
-		#plt.show()
-		fig.savefig(f'{saved_folder}/step_{step}_localPlanner.jpg')
-		plt.close()
+		plt.show()
+		#fig.savefig(f'{saved_folder}/step_{step}_localPlanner.jpg')
+		#plt.close()
 
 		#'''
 
 		#============================== convert path to poses ===================
+		print(f'len(path) = {len(path)}')
 		poses = []
 		actions = []
 		points = []
@@ -342,7 +343,7 @@ class localNav_Astar:
 			thetas.append(current_theta)
 
 		print(f'len(thetas) = {len(thetas)}, len(points) = {len(points)}')
-		#assert len(thetas) == len(points) - 1
+		assert len(thetas) == len(points) - 1
 
 		# pose: (x, y, theta)
 		previous_theta = 0
@@ -397,7 +398,7 @@ class localNav_Astar:
 				pose = (p2[0], p2[1], current_theta)
 				poses.append(pose)
 		
-		# assert len(poses) == (len(actions) + 1)
+		assert len(poses) == (len(actions) + 1)
 
 		self.path_idx = 1
 		self.path_pose_action = []

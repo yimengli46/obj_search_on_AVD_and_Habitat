@@ -10,7 +10,7 @@ create_folder(scene_output_folder)
 testing_data = np.load(f'output/TESTING_DATA/testing_episodes_{scene_name}.npy', allow_pickle=True)
 
 #for idx, data in enumerate(testing_data):
-for idx in [10]:
+for idx in [3]:
 	data = testing_data[idx]
 	print(f'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA EPS {idx} BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB')
 	start_pose, target_cat, target_poses = data

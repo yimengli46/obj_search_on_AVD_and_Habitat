@@ -240,11 +240,11 @@ def pxl_coords_to_pose(coords, pose_range, coords_range, cell_size=0.1, flag_cro
   min_x, min_z, max_x, max_z = coords_range
 
   if flag_cropped:
-    X = (x + min_x) * cell_size + min_X
-    Z = (y + min_z) * cell_size + min_Z
+    X = (x + 0.5 + min_x) * cell_size + min_X
+    Z = (y + 0.5 + min_z) * cell_size + min_Z
   else:
-    X = (x) * cell_size + min_X
-    Z = (y) * cell_size + min_Z
+    X = (x + 0.5) * cell_size + min_X
+    Z = (y + 0.5) * cell_size + min_Z
   return (X, Z)
 
 def pxl_coords_to_pose_numpy(coords, pose_range, coords_range, cell_size=0.1, flag_cropped=True):
