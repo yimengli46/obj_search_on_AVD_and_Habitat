@@ -16,6 +16,10 @@ idx2cat_dict = {v: k for k, v in cat2idx_dict.items()}
 ALLOWED_CATS = ['couch', 'potted_plant', 'refrigerator', 'oven', 'tv', 'chair', 'vase', 'potted plant', \
 	'toilet', 'clock', 'cup', 'bottle', 'bed']
 
+SEED = 5
+random.seed(SEED)
+np.random.seed(SEED)
+
 #============================== load gt semantic map and find obj centers =============================
 sem_map_npy = np.load(f'output/gt_semantic_map_from_SceneGraph/{scene_name}/gt_semantic_map.npy', allow_pickle=True).item()
 gt_semantic_map, pose_range, coords_range = read_map_npy(sem_map_npy)
@@ -66,7 +70,7 @@ y = np.linspace(0, H-1, H)
 xv, yv = np.meshgrid(x, y)
 map_coords = np.stack((xv, yv), axis=2).astype(np.int16)
 # erode the occupancy map so the free space is smaller
-kernel = np.ones((5,5), np.uint8)
+kernel = np.ones((3,3), np.uint8)
 occupancy_map_erosion = cv2.erode(occupancy_map.astype(np.uint8), kernel, iterations=1)
 mask_free = (occupancy_map_erosion == 1)
 free_map_coords = map_coords[mask_free].tolist()
@@ -95,18 +99,19 @@ testing_data = []
 for i in range(NUM_EXAMPLES):
 	# sample a cat
 	cat = random.choice(EXISTING_CATS)
+	print(f'eps = {i}, target = {cat}')
 	
-	target_poses = []
+	targets = []
 	for idx, inst in enumerate(list_instances):
 		if inst['cat'] == cat:
-			target_poses.append(inst['center_pose']) # map pose
+			targets.append((inst['center_pose'], inst['size'])) # (map pose, size)
 
 	sampled_coords = random.choice(free_map_coords)
 	map_pose = pxl_coords_to_pose(sampled_coords, pose_range, coords_range, flag_cropped=True)
 	env_pose = (map_pose[0], -map_pose[1]) # starting pose is environment pose
 	#env_pose = random.choice([(6.6, -6.9), (3.6, -4.5)])
 
-	data_tuple = (env_pose, cat, target_poses)
+	data_tuple = (env_pose, cat, targets)
 	testing_data.append(data_tuple)
 
 	# =============================== visualize the sampled data point ==================================

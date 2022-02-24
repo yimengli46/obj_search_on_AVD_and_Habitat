@@ -17,7 +17,7 @@ import habitat_sim
 from habitat.tasks.utils import cartesian_to_polar, quaternion_rotate_vector
 import random
 
-def nav(episode_id, scene_name, start_pose, goal_poses, target_cat, saved_folder):
+def nav(episode_id, scene_name, start_pose, targets, target_cat, saved_folder):
 	dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
 	#scene_name = 'Allensville_0'
 	SEED = 10
@@ -84,7 +84,8 @@ def nav(episode_id, scene_name, start_pose, goal_poses, target_cat, saved_folder
 	MODE_FIND_SUBGOAL = True
 	explore_steps = 0
 	MODE_FIND_GOAL = False
-	GOAL_POSE_list = goal_poses
+	GOAL_list = targets
+	GOAL_POSE_list = [a for (a, b) in GOAL_list]
 
 	while step < NUM_STEPS:
 		print(f'step = {step}')
@@ -117,11 +118,11 @@ def nav(episode_id, scene_name, start_pose, goal_poses, target_cat, saved_folder
 				explore_steps = 0
 				MODE_FIND_SUBGOAL = True
 				# check if the agent has reached the goal
-				for GOAL_Pose in GOAL_POSE_list:
+				for (GOAL_Pose, GOAL_size) in GOAL_list:
 					dist_subgoal_to_goal = math.sqrt(
 						(GOAL_Pose[0] - subgoal_pose[0])**2 + (GOAL_Pose[1] - subgoal_pose[1])**2)
 					print(f'dist from subgoal to goal is {dist_subgoal_to_goal}')
-					if dist_subgoal_to_goal <= 1.:
+					if dist_subgoal_to_goal <= 1. + GOAL_size:
 						print(f'==========================REACH THE GOAL =============================')
 						MODE_FIND_GOAL = True
 						break
@@ -154,8 +155,6 @@ def nav(episode_id, scene_name, start_pose, goal_poses, target_cat, saved_folder
 
 			#occupancy_map = occupancy_map[coords_range[1]:coords_range[3]+1, coords_range[0]:coords_range[2]+1]
 
-			
-		
 		#==================================== update particle filter =============================
 		if MODE_FIND_SUBGOAL:
 			PF.observeUpdate(observed_area_flag, step, saved_folder)
