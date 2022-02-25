@@ -9,7 +9,8 @@ from baseline_utils import project_pixels_to_world_coords, convertInsSegToSSeg, 
 #from semantic_prediction import SemanticPredMaskRCNN
 
 dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
-scene_list = ['Allensville_0']
+#scene_list = ['Allensville_0']
+scene_list = ['Collierville_1']
 #scene_list = ['Beechwood_0']
 #scene_list = ['Hanson_0', 'Stockman_0', 'Pinesdale_0', 'Collierville_1', 'Shelbyville_2', 'Coffeen_0', 'Corozal_1', 'Stockman_2']
 #scene_list = ['Woodbine_0', 'Ranchester_0', 'Mifflinburg_1', 'Lakeville_1', 'Hanson_2', 'Pomaria_2', 'Wainscott_1', 'Hiteman_2', 'Coffeen_2', 'Onaga_0', 'Pomaria_0', 'Newfields_1', 'Shelbyville_0', 'Klickitat_0']
@@ -25,8 +26,8 @@ step_size = 50
 map_boundary = 5
 y_coord_size = 1000
 flag_first_time_having_pixels = True
-IGNORED_CLASS = [0, 23] # 'unlabeld', 'ceiling'
-detector = 'InstanceSeg' #'InstanceSeg'
+IGNORED_CLASS = [54] # 'unlabeld', 'ceiling'
+detector = 'PanopticSeg' #'InstanceSeg'
 
 '''
 for i in range(41):

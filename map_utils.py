@@ -18,7 +18,6 @@ class SemanticMap:
 		self.UNIGNORED_CLASS = []
 		self.saved_folder = 'results'
 		self.step_size = 100
-		self.first_num_images = 100
 		self.map_boundary = 5
 		self.detector = 'PanopticSeg'
 		self.panop_pred = PanopPred()
@@ -29,9 +28,6 @@ class SemanticMap:
 		self.IGNORED_CLASS = [54] # ceiling class is ignored
 		self.UNDETECTED_PIXELS_CLASS = 59
 
-		# load img list
-		self.img_act_dict = np.load('{}/{}/img_act_dict.npy'.format(self.dataset_dir, self.scene_name), allow_pickle=True).item()
-		self.img_names = list(self.img_act_dict.keys())
 		self.id2class_mapper = np.load('configs/COCO_PanopticSeg_labels_dict.npy', allow_pickle=True).item()
 
 		# load occupancy map
@@ -39,31 +35,18 @@ class SemanticMap:
 		self.occupancy_map = np.load(f'{occ_map_path}/BEV_occupancy_map.npy')
 		#kernel = np.ones((5,5), np.uint8)
 		#self.occupancy_map = cv2.erode(occupancy_map.astype(np.uint8), kernel, iterations=1)
+		print(f'self.occupancy_map.shape = {self.occupancy_map.shape}')
 
-		self.min_X = 1000.0
-		self.max_X = -1000.0
-		self.min_Z = 1000.0
-		self.max_Z = -1000.0
-		for idx, img_name in enumerate(self.img_names):
-			pose = self.img_act_dict[img_name]['pose'] # x, z, theta
-			x, z, _ = pose
-			if x < self.min_X:
-				self.min_X = x
-			if x > self.max_X:
-				self.max_X = x
-			if z < self.min_Z:
-				self.min_Z = z
-			if z > self.max_Z:
-				self.max_Z = z
+		# ==================================== initialize 4d grid =================================
+		self.min_X = -30.0
+		self.max_X = 30.0
+		self.min_Z = -30.0
+		self.max_Z = 30.0
 
-		self.min_X -= 10.0
-		self.max_X += 10.0
-		self.min_Z -= 10.0
-		self.max_Z += 10.0
 		self.x_grid = np.arange(self.min_X, self.max_X, self.cell_size)
 		self.z_grid = np.arange(self.min_Z, self.max_Z, self.cell_size)
 
-		self.four_dim_grid = np.zeros((len(self.z_grid), 2000, len(self.x_grid), 60), dtype=np.int16) # x, y, z, C
+		self.four_dim_grid = np.zeros((len(self.z_grid), 100, len(self.x_grid), 100), dtype=np.int16) # x, y, z, C
 		self.H, self.W = len(self.z_grid), len(self.x_grid)
 
 	def build_semantic_map(self, obs, pose, step=0, saved_folder=''):

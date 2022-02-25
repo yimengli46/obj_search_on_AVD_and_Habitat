@@ -3,7 +3,7 @@ import cv2
 import matplotlib.pyplot as plt
 from baseline_utils import read_map_npy, pose_to_coords, apply_color_to_map
 
-scene_name = 'Coffeen'
+scene_name = 'Collierville'
 
 sceneGraph_npz_folder = '/home/yimeng/Datasets/3DSceneGraph/3DSceneGraph_tiny/data/automated_graph'
 scene_graph_npz = np.load(f'{sceneGraph_npz_folder}/3DSceneGraph_{scene_name}.npz', allow_pickle=True)['output'].item()

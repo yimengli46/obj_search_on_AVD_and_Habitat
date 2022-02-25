@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 import math
 from math import cos, sin, acos, atan2, pi, floor, degrees
 import random
-from navigation_utils import get_obs, random_move, get_obs_panor, read_map_npy, get_pose, change_brightness, SimpleRLEnv
-from baseline_utils import apply_color_to_map, pose_to_coords, gen_arrow_head_marker, pose_to_coords_numpy
+from navigation_utils import change_brightness, SimpleRLEnv
+from baseline_utils import apply_color_to_map, pose_to_coords, gen_arrow_head_marker, pose_to_coords_numpy, read_map_npy
 from map_utils import SemanticMap
 from PF_continuous_utils import ParticleFilter
 from localNavigator_Astar import localNav_Astar
@@ -17,7 +17,7 @@ import habitat_sim
 from habitat.tasks.utils import cartesian_to_polar, quaternion_rotate_vector
 import random
 
-def nav(env, episode_id, scene_name, start_pose, targets, target_cat, saved_folder):
+def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_cat, saved_folder):
 	dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
 	#scene_name = 'Allensville_0'
 	SEED = 10
@@ -60,7 +60,7 @@ def nav(env, episode_id, scene_name, start_pose, targets, target_cat, saved_fold
 
 	#===================================== setup the start location ===============================#
 	
-	agent_pos = np.array([start_pose[0], 0.17, start_pose[1]]) # (6.6, -6.9), (3.6, -4.5)
+	agent_pos = np.array([start_pose[0], scene_height, start_pose[1]]) # (6.6, -6.9), (3.6, -4.5)
 	agent_rot = habitat_sim.utils.common.quat_from_angle_axis(2.36, habitat_sim.geo.GRAVITY)
 	# check if the start point is navigable
 	if not env.habitat_env.sim.is_navigable(agent_pos):
@@ -209,7 +209,7 @@ def nav(env, episode_id, scene_name, start_pose, targets, target_cat, saved_fold
 		#====================================== take next action ================================
 		step += 1
 		explore_steps += 1
-		action, next_pose = LN.next_action(occupancy_map, env, 0.17)
+		action, next_pose = LN.next_action(occupancy_map, env, scene_height)
 		print(f'action = {action}')
 		if action == "collision":
 			#assert next_pose is None
@@ -233,7 +233,7 @@ def nav(env, episode_id, scene_name, start_pose, targets, target_cat, saved_fold
 			MODE_FIND_SUBGOAL = True
 		else:
 			print(f'next_pose = {next_pose}')
-			agent_pos = np.array([next_pose[0], 0.17, next_pose[1]])
+			agent_pos = np.array([next_pose[0], scene_height, next_pose[1]])
 			# output rot is negative of the input angle
 			agent_rot = habitat_sim.utils.common.quat_from_angle_axis(-next_pose[2], habitat_sim.geo.GRAVITY)
 			obs = env.habitat_env.sim.get_observations_at(agent_pos, agent_rot, keep_agent_at_new_pose=True)

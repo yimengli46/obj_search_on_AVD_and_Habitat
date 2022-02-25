@@ -12,7 +12,7 @@ from matplotlib.colors import LogNorm
 
 mode = 'semantic_prior'
 flag_visualize_ins_weights = False
-flag_visualize_peaks = True
+flag_visualize_peaks = False
 flag_visualize_detected_centers = False
 
 cat2idx_dict = get_class_mapper()

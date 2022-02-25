@@ -21,10 +21,10 @@ class SemanticMap:
 		self.UNDETECTED_PIXELS_CLASS = 59
 
 		# ==================================== initialize 4d grid =================================
-		self.min_X = -50.0
-		self.max_X = 50.0
-		self.min_Z = -50.0
-		self.max_Z = 50.0
+		self.min_X = -30.0
+		self.max_X = 30.0
+		self.min_Z = -30.0
+		self.max_Z = 30.0
 
 		self.x_grid = np.arange(self.min_X, self.max_X, self.cell_size)
 		self.z_grid = np.arange(self.min_Z, self.max_Z, self.cell_size)
@@ -119,7 +119,7 @@ class SemanticMap:
 		# argmax over the category axis
 		semantic_map = np.argmax(grid_sum_height, axis=2)
 
-		semantic_map = semantic_map[self.min_z_coord : self.max_z_coord+1, self.min_x_coord:self.max_x_coord+1]
+		cropped_semantic_map = semantic_map[self.min_z_coord : self.max_z_coord+1, self.min_x_coord:self.max_x_coord+1]
 
 		map_dict = {}
 		map_dict['min_x'] = self.min_x_coord
@@ -132,10 +132,11 @@ class SemanticMap:
 		map_dict['max_Z'] = self.max_Z
 		map_dict['W'] = self.W
 		map_dict['H'] = self.H
-		map_dict['semantic_map'] = semantic_map
+		map_dict['semantic_map'] = cropped_semantic_map
 		print(f'semantic_map.shape = {semantic_map.shape}')
+		print(f'cropped_semantic_map.shape = {cropped_semantic_map.shape}')
 		np.save(f'{self.saved_folder}/BEV_semantic_map.npy', map_dict)
 
-		semantic_map = cv2.resize(semantic_map, (int(self.W*ENLARGE_SIZE), int(self.H*ENLARGE_SIZE)), interpolation=cv2.INTER_NEAREST)
-		color_semantic_map = apply_color_to_map(semantic_map)
+		cropped_semantic_map = cv2.resize(cropped_semantic_map, (int(self.W*ENLARGE_SIZE), int(self.H*ENLARGE_SIZE)), interpolation=cv2.INTER_NEAREST)
+		color_semantic_map = apply_color_to_map(cropped_semantic_map)
 		save_fig_through_plt(color_semantic_map, f'{self.saved_folder}/final_semantic_map.jpg')
