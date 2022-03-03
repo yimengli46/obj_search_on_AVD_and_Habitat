@@ -96,9 +96,7 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 		#assert 1==2
 
 		#======================================= decide if the agent run PF or not ================================
-		if subgoal_pose is not None:
-		#if not MODE_FIND_SUBGOAL:
-			assert subgoal_pose is not None
+		if subgoal_pose is not None and MODE_FIND_SUBGOAL:
 			# condition 1: reach the subgoal
 			dist_to_subgoal = math.sqrt(
 				(agent_map_pose[0] - subgoal_pose[0])**2 + (agent_map_pose[1] - subgoal_pose[1])**2) # pose might be wrong here
@@ -106,7 +104,6 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 			if dist_to_subgoal <= THRESH_REACH:
 				print(f'condition 1: reach the subgoal')
 				explore_steps = 0
-				MODE_FIND_SUBGOAL = True
 				# check if the agent has reached the goal
 				for (GOAL_Pose, GOAL_size) in GOAL_list:
 					dist_subgoal_to_goal = math.sqrt(
@@ -116,16 +113,12 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 						print(f'==========================REACH THE GOAL =============================')
 						MODE_FIND_GOAL = True
 						return MODE_FIND_GOAL, step
-						break
 
-			# condition 2: run out of exploration steps
-			elif explore_steps >= NUM_STEPS_EXPLORE:
+		# condition 2: run out of exploration steps
+		elif explore_steps >= NUM_STEPS_EXPLORE:
 				print(f'condition 2: running out exploration steps')
 				explore_steps = 0
 				MODE_FIND_SUBGOAL = True
-
-		if MODE_FIND_GOAL:
-			break
 
 		#============================================= visualize semantic map ===========================================#
 		if step % NUM_STEPS_vis == 0:
@@ -158,11 +151,14 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 
 			# peak is not subgoal
 			# subgoal is the closest/reachable(bfs) free position/coordinates to the peak on the occupancy map
-			subgoal_coords, subgoal_pose = LN.plan(peak_pose, agent_map_pose, occupancy_map, step, saved_folder)
+			flag_plan, subgoal_coords, subgoal_pose = LN.plan(peak_pose, agent_map_pose, occupancy_map, step, saved_folder)
+			while not flag_plan:
+				peak_pose = PF.getNextPeak(step, saved_folder) 
+				flag_plan, subgoal_coords, subgoal_pose = LN.plan(peak_pose, agent_map_pose, occupancy_map, step, saved_folder)
 			print(f'subgoal_coords = {subgoal_coords}')
 
+		#=================================== visualize the agent pose as red nodes =======================
 		if step % NUM_STEPS_vis == 0:
-			#=================================== visualize the agent pose as red nodes =======================
 			x_coord_lst, z_coord_lst, theta_lst = [], [], []
 			for cur_pose in traverse_lst:
 				x_coord, z_coord = pose_to_coords((cur_pose[0], cur_pose[1]), pose_range, coords_range, cell_size=.1)
@@ -207,11 +203,11 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 			#'''
 			
 		#====================================== take next action ================================
-		step += 1
-		explore_steps += 1
 		action, next_pose = LN.next_action(occupancy_map, env, scene_height)
 		print(f'action = {action}')
 		if action == "collision":
+			step += 1
+			explore_steps += 1
 			#assert next_pose is None
 			# input next_pose is environment pose, not sem_map pose
 			semMap_module.add_occupied_cell_pose(next_pose)
@@ -227,17 +223,22 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 			plt.show()
 			'''
 			
-			subgoal_coords, subgoal_pose = LN.plan(peak_pose, agent_map_pose, occupancy_map, step, saved_folder)
+			flag_plan, subgoal_coords, subgoal_pose = LN.plan(peak_pose, agent_map_pose, occupancy_map, step, saved_folder)
+			while not flag_plan:
+				peak_pose = PF.getNextPeak(step, saved_folder) 
+				flag_plan, subgoal_coords, subgoal_pose = LN.plan(peak_pose, agent_map_pose, occupancy_map, step, saved_folder)
 			# do not take any actions
 		elif action == "": # finished navigating to the subgoal
+			print(f'reached the subgoal')
 			MODE_FIND_SUBGOAL = True
 		else:
+			step += 1
+			explore_steps += 1
 			print(f'next_pose = {next_pose}')
 			agent_pos = np.array([next_pose[0], scene_height, next_pose[1]])
 			# output rot is negative of the input angle
 			agent_rot = habitat_sim.utils.common.quat_from_angle_axis(-next_pose[2], habitat_sim.geo.GRAVITY)
 			obs = env.habitat_env.sim.get_observations_at(agent_pos, agent_rot, keep_agent_at_new_pose=True)
-
 
 	return False, step
 	

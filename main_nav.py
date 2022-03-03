@@ -49,9 +49,10 @@ for episode_id in range(5):
 		create_folder(scene_output_folder)
 		testing_data = np.load(f'output/TESTING_DATA/testing_episodes_{scene_name}.npy', allow_pickle=True)
 
+		#'''
 		results = {}
 		for idx, data in enumerate(testing_data):
-		#for idx in range(22, 23):
+		#for idx in range(1, 2):
 			data = testing_data[idx]
 			print(f'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA EPS {idx} BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB')
 			start_pose, target_cat, targets = data
@@ -75,5 +76,6 @@ for episode_id in range(5):
 			results[idx] = result
 
 		np.save(f'{output_folder}/results_{scene_name}.npy', results)
+		#'''
 
 env.close()

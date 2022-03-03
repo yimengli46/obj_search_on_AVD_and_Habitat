@@ -302,7 +302,6 @@ class localNav_Astar:
 			mask_new[agent_local_coords[1], agent_local_coords[0]] = 3 # agent cell
 			mask_new[subgoal_local_coords[1], subgoal_local_coords[0]] = 4 # subgoal cell
 			mask_new[peak_local_coords[1], peak_local_coords[0]] = 5 # peak cell
-			
 
 			fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20, 10))
 			# visualize gt semantic map
@@ -323,6 +322,10 @@ class localNav_Astar:
 
 		#============================== convert path to poses ===================
 		print(f'len(path) = {len(path)}')
+		if len(path) <= 1:
+			print(f'agent already reached subgoal')
+			return False, subgoal_coords, subgoal_pose
+
 		poses = []
 		actions = []
 		points = []
@@ -330,10 +333,6 @@ class localNav_Astar:
 		for loc in path:
 			pose = pxl_coords_to_pose((loc[0]+xmin, loc[1]+zmin), self.pose_range, self.coords_range)
 			points.append(pose)
-
-		if len(points) == 1:
-			print(f'agent is at the subgoal, need to find a new peak')
-			assert 1==2
 
 		## compute theta for each point except the last one
 		## theta is in the range [-pi, pi]
@@ -344,7 +343,7 @@ class localNav_Astar:
 			current_theta = math.atan2(p2[1]-p1[1], p2[0]-p1[0])
 			thetas.append(current_theta)
 
-		print(f'len(thetas) = {len(thetas)}, len(points) = {len(points)}')
+		#print(f'len(thetas) = {len(thetas)}, len(points) = {len(points)}')
 		assert len(thetas) == len(points) - 1
 
 		# pose: (x, y, theta)
@@ -416,7 +415,7 @@ class localNav_Astar:
 			self.path_pose_action.append((new_pose, action))
 
 		#print(f'path_idx = {self.path_idx}, path_pose_action = {self.path_pose_action}')
-		return subgoal_coords, subgoal_pose
+		return True, subgoal_coords, subgoal_pose
 
 	def next_action(self, occupancy_map, env, height):
 		'''

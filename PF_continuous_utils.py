@@ -215,6 +215,9 @@ class ParticleFilter():
 		self.coords_range = coords_range
 		self.initializeUniformly()
 
+		self.chosen_peak_idx = -1
+		self.peaks_poses = []
+
 	def initializeUniformly(self):
 		"""
 		Initialize a list of particles. Use self.numParticles for the number of
@@ -353,11 +356,12 @@ class ParticleFilter():
 	def getPeak(self, step, saved_folder):
 		#===================================== finding the peak ================================
 		gm = self.findPeak()
-		peaks_poses = gm.means_ # map pose
-		peaks_coords = pose_to_coords_frame_numpy(peaks_poses, self.pose_range, self.coords_range)
+		sorted_peak_idx = np.argsort(np.array(gm.weights_))[::-1]
+		self.peaks_poses = gm.means_[sorted_peak_idx] # map pose
+		peaks_coords = pose_to_coords_frame_numpy(self.peaks_poses, self.pose_range, self.coords_range)
 		# choose peak with the largest weight
-		chosen_peak_idx = np.argmax(np.array(gm.weights_))
-		chosen_peak_pose = peaks_poses[chosen_peak_idx]
+		self.chosen_peak_idx = 0
+		chosen_peak_pose = self.peaks_poses[self.chosen_peak_idx]
 		
 		#===================================== visualize particles and the peak =============================
 		if flag_visualize_peaks:
@@ -374,6 +378,14 @@ class ParticleFilter():
 			fig.savefig(f'{saved_folder}/step_{step}_peak.jpg')
 			plt.close()
 
+		return chosen_peak_pose
+
+	def getNextPeak(self, step, saved_folder):
+		self.chosen_peak_idx += 1
+		if self.chosen_peak_idx == len(self.peaks_poses):
+			print('exhausted all the gaussian peaks.')
+			assert 1==2
+		chosen_peak_pose = self.peaks_poses[self.chosen_peak_idx]
 		return chosen_peak_pose
 
 	def visualizeBelief(self, ax):
