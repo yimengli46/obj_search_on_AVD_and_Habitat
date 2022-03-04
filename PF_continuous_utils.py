@@ -11,9 +11,8 @@ from navigation_utils import change_brightness
 from matplotlib.colors import LogNorm
 
 mode = 'semantic_prior'
-flag_visualize_ins_weights = False
-flag_visualize_peaks = False
-flag_visualize_detected_centers = False
+flag_visualize_ins_weights = True
+flag_visualize_peaks = True
 
 cat2idx_dict = get_class_mapper()
 idx2cat_dict = {v: k for k, v in cat2idx_dict.items()}
@@ -21,7 +20,6 @@ print(f'idx2cat = {idx2cat_dict}')
 
 #================================= load the weight prior =================
 weight_prior = np.load(f'output/semantic_prior/weight_prior.npy', allow_pickle=True).item()
-
 
 def get_cooccurred_object_weight(target_obj, relevant_obj):
 	if target_obj in weight_prior:
@@ -200,8 +198,6 @@ class DiscreteDistribution(dict):
 		weights = list(self.values())
 		return random.choices(population, weights=weights, k=num_samples)
 
-
-
 class ParticleFilter():
 	"""
 	A particle filter for approximately tracking a single ghost.
@@ -264,18 +260,19 @@ class ParticleFilter():
 		list_instances = compute_centers(semantic_map)
 		print(f'num_instances = {len(list_instances)}')
 
+		x_coord_lst = []
+		z_coord_lst = []
+		for idx, inst in enumerate(list_instances):
+			inst_coords = inst['center']
+			x_coord_lst.append(inst_coords[0])
+			z_coord_lst.append(inst_coords[1])
+
 		#=============================== visualize detected instance centers ======================
-		if flag_visualize_detected_centers:
+		if False:
 			fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 12))
 			ax.imshow(color_semantic_map)
 			ax.get_xaxis().set_visible(False)
 			ax.get_yaxis().set_visible(False)
-			x_coord_lst = []
-			z_coord_lst = []
-			for idx, inst in enumerate(list_instances):
-				inst_coords = inst['center']
-				x_coord_lst.append(inst_coords[0])
-				z_coord_lst.append(inst_coords[1])
 			ax.scatter(x_coord_lst, z_coord_lst, s=30, c='white', zorder=2)
 			#fig.tight_layout()
 			plt.title('visualize detected instance centers')
@@ -345,7 +342,6 @@ class ParticleFilter():
 			fig.savefig(f'{saved_folder}/step_{step}_particle_weights.jpg')
 			plt.close()
 
-
 		if weights.total() == 0: # corner case
 			self.initializeUniformly()
 		else:
@@ -371,7 +367,7 @@ class ParticleFilter():
 			self.visualizeGMM(ax, gm)
 			ax.scatter(peaks_coords[:, 0], peaks_coords[:, 1], s=30, c='black', zorder=3)
 			# plot the selected peak in yellow
-			ax.scatter(peaks_coords[chosen_peak_idx, 0], peaks_coords[chosen_peak_idx, 1], s=50, c='yellow', zorder=4)
+			ax.scatter(peaks_coords[self.chosen_peak_idx, 0], peaks_coords[self.chosen_peak_idx, 1], s=50, c='yellow', zorder=4)
 			#fig.tight_layout()
 			plt.title('particles (white nodes are peaks of Gaussian components, yellow node is the chosen peak)')
 			#plt.show()

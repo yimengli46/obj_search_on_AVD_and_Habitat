@@ -21,14 +21,14 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 	dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
 	#scene_name = 'Allensville_0'
 	SEED = 10
-	NUM_STEPS = 1251
+	NUM_STEPS = 600
 	cell_size = 0.1
 	flag_vis = False
 	#saved_folder = 'output/TEST_RESULTS'
 	vis_observed_area_from_panorama = False
 	flag_gt_semantic_map = True
 	NUM_STEPS_EXPLORE = 30
-	NUM_STEPS_vis = 50
+	NUM_STEPS_vis = 30
 	detector = 'PanopticSeg'
 	THRESH_REACH = 0.8
 
