@@ -21,14 +21,14 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 	dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
 	#scene_name = 'Allensville_0'
 	SEED = 10
-	NUM_STEPS = 600
+	NUM_STEPS = 1250
 	cell_size = 0.1
 	flag_vis = False
 	#saved_folder = 'output/TEST_RESULTS'
 	vis_observed_area_from_panorama = False
 	flag_gt_semantic_map = True
 	NUM_STEPS_EXPLORE = 30
-	NUM_STEPS_vis = 30
+	NUM_STEPS_vis = 100
 	detector = 'PanopticSeg'
 	THRESH_REACH = 0.8
 
@@ -42,7 +42,7 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 	#occ_map = np.load(f'output/semantic_map/{scene_name}/BEV_occupancy_map.npy', allow_pickle=True)
 
 	PF = ParticleFilter(target_cat, 10000, gt_semantic_map.copy(), pose_range, coords_range)
-	LN = localNav_Astar(pose_range, coords_range)
+	LN = localNav_Astar(pose_range, coords_range, scene_name)
 
 	semMap_module = SemanticMap(scene_name, pose_range, coords_range) # build the observed sem map
 	traverse_lst = []
@@ -76,6 +76,7 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 	MODE_FIND_GOAL = False
 	GOAL_list = targets
 	GOAL_POSE_list = [a for (a, b) in GOAL_list]
+	gt_number_steps = -1
 
 	while step < NUM_STEPS:
 		print(f'step = {step}')
@@ -90,6 +91,16 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 		pose = (agent_pos[0], agent_pos[2], angle)
 		agent_map_pose = (pose[0], -pose[1], -pose[2])
 		traverse_lst.append(agent_map_pose)
+
+		#=========================== compute optimal number of steps to the goal ========================
+		if step == 0:
+			lst_gt_number_steps = []
+			for (GOAL_Pose, GOAL_size) in GOAL_list:
+				goal_steps = LN.get_gt_number_steps(GOAL_Pose, agent_map_pose)
+				lst_gt_number_steps.append(goal_steps)
+			gt_number_steps = min(lst_gt_number_steps)
+			print(f'closest goal is {gt_number_steps} steps away!')
+
 
 		# add the observed area
 		semMap_module.build_semantic_map(obs, pose, step=step, saved_folder=saved_folder)
@@ -112,7 +123,7 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 					if dist_subgoal_to_goal <= 1. + GOAL_size:
 						print(f'==========================REACH THE GOAL =============================')
 						MODE_FIND_GOAL = True
-						return MODE_FIND_GOAL, step
+						return MODE_FIND_GOAL, step, gt_number_steps
 
 		# condition 2: run out of exploration steps
 		elif explore_steps >= NUM_STEPS_EXPLORE:
@@ -240,5 +251,5 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 			agent_rot = habitat_sim.utils.common.quat_from_angle_axis(-next_pose[2], habitat_sim.geo.GRAVITY)
 			obs = env.habitat_env.sim.get_observations_at(agent_pos, agent_rot, keep_agent_at_new_pose=True)
 
-	return False, step
+	return False, step, gt_number_steps
 	

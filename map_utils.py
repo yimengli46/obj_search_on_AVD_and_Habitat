@@ -62,7 +62,8 @@ class SemanticMap:
 		print('pose = {}'.format(pose))
 
 		#'''
-		if step % 10 == 0:
+		#if step % 10 == 0:
+		if False:
 			fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(15, 6))
 			ax[0].imshow(rgb_img)
 			ax[0].get_xaxis().set_visible(False)

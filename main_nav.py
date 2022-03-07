@@ -63,7 +63,7 @@ for episode_id in range(5):
 			flag = False
 			steps = 0
 			try:
-				flag, steps = nav(env, idx, scene_name, height, start_pose, targets, target_cat, saved_folder)
+				flag, steps, gt_steps = nav(env, idx, scene_name, height, start_pose, targets, target_cat, saved_folder)
 			except:
 				print(f'CCCCCCCCCCCCCC failed EPS {idx} DDDDDDDDDDDDDDD')
 
@@ -71,6 +71,7 @@ for episode_id in range(5):
 			result['eps_id'] = idx
 			result['target'] = target_cat
 			result['steps'] = steps
+			result['optim_steps'] = gt_steps
 			result['success'] = flag
 
 			results[idx] = result
