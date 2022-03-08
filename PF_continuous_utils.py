@@ -79,11 +79,13 @@ def visualize_GMM_dist(weight, size, inst_pose, particles, particle_weights, fla
 		dist = sqrt((particle_x - inst_pose[0])**2 + (particle_z - inst_pose[1])**2)
 		P_e_X = 1.
 
+		# target object is not detected
 		if not flag_target:
 			if dist <= radius and dist >= size:
-				P_e_X *= 0.5
+				P_e_X *= weight
 			else:
-				P_e_X *= .1
+				P_e_X *= weight * .5
+		# target object is detected
 		else:
 			if dist <= size:
 				P_e_X *= 10.
@@ -202,17 +204,21 @@ class ParticleFilter():
 	"""
 	A particle filter for approximately tracking a single ghost.
 	"""
-	def __init__(self, target_cat, numParticles, semantic_map, pose_range, coords_range):
+	def __init__(self, scene_name, target_cat, numParticles, semantic_map, pose_range, coords_range):
 		self.k2 = target_cat
 		self.H, self.W = semantic_map.shape[:2]
 		self.numParticles = numParticles
 		self.semantic_map = semantic_map
 		self.pose_range = pose_range
 		self.coords_range = coords_range
+		self.scene_name = scene_name
 		self.initializeUniformly()
 
 		self.chosen_peak_idx = -1
 		self.peaks_poses = []
+
+		# load built semantic map
+		self.built_sem_map = np.load(f'output/semantic_map/{self.scene_name}/BEV_semantic_map.npy', allow_pickle=True).item()['semantic_map']
 
 	def initializeUniformly(self):
 		"""
@@ -276,7 +282,7 @@ class ParticleFilter():
 			ax.scatter(x_coord_lst, z_coord_lst, s=30, c='white', zorder=2)
 			#fig.tight_layout()
 			plt.title('visualize detected instance centers')
-			#plt.show()
+			# plt.show()
 			fig.savefig(f'{saved_folder}/step_{step}_detected_centers.jpg')
 			plt.close()
 		
@@ -314,7 +320,7 @@ class ParticleFilter():
 
 		#================================== zero out weights on explored areas================================
 		mask_explored = np.logical_and(observed_area_flag, self.semantic_map != cat2idx_dict[self.k2])
-		mask_zero_out = mask_explored
+		mask_zero_out = np.logical_or(mask_explored, self.built_sem_map == 0)
 		for k in weights:
 			coords = pose_to_coords(k, self.pose_range, self.coords_range, flag_cropped=True)
 			if mask_zero_out[coords[1], coords[0]] == 1:
@@ -338,7 +344,7 @@ class ParticleFilter():
 			ax[1].get_yaxis().set_visible(False)
 			#fig.tight_layout()
 			plt.title('particle weights after weight normalization (color denotes weight)')
-			# plt.show()
+			#plt.show()
 			fig.savefig(f'{saved_folder}/step_{step}_particle_weights.jpg')
 			plt.close()
 

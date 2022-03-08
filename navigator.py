@@ -41,7 +41,7 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 	H, W = gt_semantic_map.shape[:2]
 	#occ_map = np.load(f'output/semantic_map/{scene_name}/BEV_occupancy_map.npy', allow_pickle=True)
 
-	PF = ParticleFilter(target_cat, 10000, gt_semantic_map.copy(), pose_range, coords_range)
+	PF = ParticleFilter(scene_name, target_cat, 10000, gt_semantic_map.copy(), pose_range, coords_range)
 	LN = localNav_Astar(pose_range, coords_range, scene_name)
 
 	semMap_module = SemanticMap(scene_name, pose_range, coords_range) # build the observed sem map
@@ -93,7 +93,7 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 		traverse_lst.append(agent_map_pose)
 
 		#=========================== compute optimal number of steps to the goal ========================
-		if step == 0:
+		if False:
 			lst_gt_number_steps = []
 			for (GOAL_Pose, GOAL_size) in GOAL_list:
 				goal_steps = LN.get_gt_number_steps(GOAL_Pose, agent_map_pose)
@@ -123,7 +123,7 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 					if dist_subgoal_to_goal <= 1. + GOAL_size:
 						print(f'==========================REACH THE GOAL =============================')
 						MODE_FIND_GOAL = True
-						return MODE_FIND_GOAL, step, gt_number_steps
+						return MODE_FIND_GOAL, step
 
 		# condition 2: run out of exploration steps
 		elif explore_steps >= NUM_STEPS_EXPLORE:
@@ -136,7 +136,7 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 			#==================================== visualize the path on the map ==============================
 			built_semantic_map, observed_area_flag, occupancy_map = semMap_module.get_semantic_map()
 
-			observed_area_flag = (observed_area_flag[coords_range[1]:coords_range[3]+1, coords_range[0]:coords_range[2]+1])
+			
 			## for the explored free space visualization
 			mask_observed_and_non_obj = np.logical_and(observed_area_flag, gt_semantic_map == 0)
 			gt_semantic_map[mask_observed_and_non_obj] = 59 # class index for explored non-object area
@@ -251,5 +251,5 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 			agent_rot = habitat_sim.utils.common.quat_from_angle_axis(-next_pose[2], habitat_sim.geo.GRAVITY)
 			obs = env.habitat_env.sim.get_observations_at(agent_pos, agent_rot, keep_agent_at_new_pose=True)
 
-	return False, step, gt_number_steps
+	return False, step
 	

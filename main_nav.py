@@ -44,7 +44,7 @@ for episode_id in range(5):
 		#=============================== traverse each floor ===========================
 		print(f'*****scene_name = {scene_name}***********')
 
-		output_folder = 'output/TESTING_RESULTS'
+		output_folder = 'output/TESTING_RESULTS_LEARNED_PRIOR'
 		scene_output_folder = f'{output_folder}/{scene_name}'
 		create_folder(scene_output_folder)
 		testing_data = np.load(f'output/TESTING_DATA/testing_episodes_{scene_name}.npy', allow_pickle=True)
@@ -55,7 +55,7 @@ for episode_id in range(5):
 		#for idx in range(1, 2):
 			data = testing_data[idx]
 			print(f'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA EPS {idx} BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB')
-			start_pose, target_cat, targets = data
+			start_pose, target_cat, targets, gt_steps = data
 			#start_pose = (6.6, -6.9)
 			#target_cat = 'refrigerator'
 			saved_folder = f'{scene_output_folder}/eps_{idx}_{target_cat}'
@@ -63,7 +63,7 @@ for episode_id in range(5):
 			flag = False
 			steps = 0
 			try:
-				flag, steps, gt_steps = nav(env, idx, scene_name, height, start_pose, targets, target_cat, saved_folder)
+				flag, steps = nav(env, idx, scene_name, height, start_pose, targets, target_cat, saved_folder)
 			except:
 				print(f'CCCCCCCCCCCCCC failed EPS {idx} DDDDDDDDDDDDDDD')
 

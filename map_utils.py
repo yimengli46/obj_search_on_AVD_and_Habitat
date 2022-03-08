@@ -36,7 +36,7 @@ class SemanticMap:
 		#kernel = np.ones((5,5), np.uint8)
 		#self.occupancy_map = cv2.erode(occupancy_map.astype(np.uint8), kernel, iterations=1)
 		print(f'self.occupancy_map.shape = {self.occupancy_map.shape}')
-
+		
 		# ==================================== initialize 4d grid =================================
 		self.min_X = -30.0
 		self.max_X = 30.0
@@ -116,6 +116,7 @@ class SemanticMap:
 
 		grid_sum_cat = np.sum(grid_sum_height, axis=2)
 		observed_area_flag = (grid_sum_cat > 0)
+		observed_area_flag = (observed_area_flag[self.coords_range[1]:self.coords_range[3]+1, self.coords_range[0]:self.coords_range[2]+1])
 
 		# get occupancy map
 		'''
