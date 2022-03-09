@@ -28,7 +28,7 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 	vis_observed_area_from_panorama = False
 	flag_gt_semantic_map = True
 	NUM_STEPS_EXPLORE = 30
-	NUM_STEPS_vis = 100
+	NUM_STEPS_vis = 20
 	detector = 'PanopticSeg'
 	THRESH_REACH = 0.8
 
