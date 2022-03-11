@@ -4,6 +4,7 @@ from baseline_utils import pose_to_coords_frame, pose_to_coords, pxl_coords_to_p
 import math
 import heapq as hq
 from collections import deque
+from core import cfg
 
 upper_thresh_theta = math.pi / 6
 lower_thresh_theta = math.pi / 12
@@ -180,11 +181,11 @@ class localNav_Astar:
 	def __init__(self, pose_range, coords_range, scene_name):
 		self.pose_range = pose_range
 		self.coords_range = coords_range
-		self.local_map_margin = 30
+		self.local_map_margin = cfg.LN.LOCAL_MAP_MARGIN
 		self.path_pose_action = []
 		self.path_idx = -1 # record the index of the agent in the path
 		
-		occ_map_path = f'output/semantic_map/{scene_name}'
+		occ_map_path = f'{cfg.SAVE.OCCUPANCY_MAP_PATH}/{scene_name}'
 		occupancy_map = np.load(f'{occ_map_path}/BEV_occupancy_map.npy')
 		occupancy_map = np.where(occupancy_map==1, 3, occupancy_map) # free cell
 		occupancy_map = np.where(occupancy_map==0, 1, occupancy_map) # occupied cell
@@ -301,7 +302,7 @@ class localNav_Astar:
 
 		#========================== visualize the path ==========================
 		#'''
-		if False:
+		if cfg.LN.FLAG_VISUALIZE_LOCAL_MAP:
 			mask_new = mask_free.astype(np.int16)
 			for loc in path:
 				mask_new[loc[1], loc[0]] = 2

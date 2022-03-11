@@ -16,30 +16,16 @@ import habitat
 import habitat_sim
 from habitat.tasks.utils import cartesian_to_polar, quaternion_rotate_vector
 import random
+from core import cfg
 
 def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_cat, saved_folder):
-	dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
-	#scene_name = 'Allensville_0'
-	SEED = 10
-	NUM_STEPS = 1250
-	cell_size = 0.1
-	flag_vis = False
-	#saved_folder = 'output/TEST_RESULTS'
-	vis_observed_area_from_panorama = False
-	flag_gt_semantic_map = True
-	NUM_STEPS_EXPLORE = 30
-	NUM_STEPS_vis = 20
-	detector = 'PanopticSeg'
-	THRESH_REACH = 0.8
+	np.random.seed(cfg.GENERAL.RANDOM_SEED)
+	random.seed(cfg.GENERAL.RANDOM_SEED)
 
-	np.random.seed(SEED)
-	random.seed(SEED)
-
-	if flag_gt_semantic_map:
-		sem_map_npy = np.load(f'output/gt_semantic_map_from_SceneGraph/{scene_name}/gt_semantic_map.npy', allow_pickle=True).item()
+	if cfg.NAVI.FLAG_GT_SEM_MAP:
+		sem_map_npy = np.load(f'{cfg.SAVE.SEM_MAP_FROM_SCENE_GRAPH_PATH}/{scene_name}/gt_semantic_map.npy', allow_pickle=True).item()
 	gt_semantic_map, pose_range, coords_range = read_map_npy(sem_map_npy)
 	H, W = gt_semantic_map.shape[:2]
-	#occ_map = np.load(f'output/semantic_map/{scene_name}/BEV_occupancy_map.npy', allow_pickle=True)
 
 	PF = ParticleFilter(scene_name, target_cat, 10000, gt_semantic_map.copy(), pose_range, coords_range)
 	LN = localNav_Astar(pose_range, coords_range, scene_name)
@@ -78,7 +64,7 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 	GOAL_POSE_list = [a for (a, b) in GOAL_list]
 	gt_number_steps = -1
 
-	while step < NUM_STEPS:
+	while step < cfg.NAVI.NUM_STEPS:
 		print(f'step = {step}')
 
 		#=============================== get agent global pose on habitat env ========================#
@@ -112,7 +98,7 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 			dist_to_subgoal = math.sqrt(
 				(agent_map_pose[0] - subgoal_pose[0])**2 + (agent_map_pose[1] - subgoal_pose[1])**2) # pose might be wrong here
 			print(f'dist_to_subgoal = {dist_to_subgoal}')
-			if dist_to_subgoal <= THRESH_REACH:
+			if dist_to_subgoal <= cfg.NAVI.THRESH_REACH:
 				print(f'condition 1: reach the subgoal')
 				explore_steps = 0
 				# check if the agent has reached the goal
@@ -126,13 +112,13 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 						return MODE_FIND_GOAL, step
 
 		# condition 2: run out of exploration steps
-		elif explore_steps >= NUM_STEPS_EXPLORE:
+		elif explore_steps >= cfg.NAVI.NUM_STEPS_EXPLORE:
 				print(f'condition 2: running out exploration steps')
 				explore_steps = 0
 				MODE_FIND_SUBGOAL = True
 
 		#============================================= visualize semantic map ===========================================#
-		if step % NUM_STEPS_vis == 0:
+		if step % cfg.NAVI.NUM_STEPS_VIS == 0:
 			#==================================== visualize the path on the map ==============================
 			built_semantic_map, observed_area_flag, occupancy_map = semMap_module.get_semantic_map()
 
@@ -169,10 +155,10 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 			print(f'subgoal_coords = {subgoal_coords}')
 
 		#=================================== visualize the agent pose as red nodes =======================
-		if step % NUM_STEPS_vis == 0:
+		if step % cfg.NAVI.NUM_STEPS_VIS == 0:
 			x_coord_lst, z_coord_lst, theta_lst = [], [], []
 			for cur_pose in traverse_lst:
-				x_coord, z_coord = pose_to_coords((cur_pose[0], cur_pose[1]), pose_range, coords_range, cell_size=.1)
+				x_coord, z_coord = pose_to_coords((cur_pose[0], cur_pose[1]), pose_range, coords_range)
 				x_coord_lst.append(x_coord)
 				z_coord_lst.append(z_coord)			
 				theta_lst.append(cur_pose[2])

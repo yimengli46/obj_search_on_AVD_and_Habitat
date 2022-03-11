@@ -4,9 +4,9 @@ from baseline_utils import create_folder
 import habitat
 import habitat_sim
 from navigation_utils import SimpleRLEnv, get_scene_name
+from core import cfg
 
-#scene_list = ['Allensville_0']
-scene_list = ['Collierville_1', 'Darden_0', 'Markleeville_0', 'Wiconisco_0']
+scene_list = cfg.MAIN.SCENE_LIST
 scene_dict = {}
 for scene in scene_list:
 	scene_name = scene[:-2]
@@ -16,15 +16,13 @@ for scene in scene_list:
 	temp['floor'] = floor 
 	scene_dict[scene_name] = temp
 
-scene_heights_dict = np.load(f'/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/scene_height_distribution/scene_heights.npy', allow_pickle=True).item()
+scene_heights_dict = np.load(cfg.GENERAL.SCENE_HEIGHTS_DICT_PATH, allow_pickle=True).item()
 
 #================================ load habitat env============================================
-config = habitat.get_config(config_paths="/home/yimeng/Datasets/habitat-lab/configs/tasks/devendra_objectnav_gibson.yaml")
+config = habitat.get_config(config_paths=cfg.GENERAL.HABITAT_CONFIG_PATH)
 config.defrost()
-config.DATASET.DATA_PATH = '/home/yimeng/Datasets/habitat-lab/data/datasets/objectnav/gibson/all.json.gz'
-config.DATASET.SCENES_DIR = '/home/yimeng/Datasets/habitat-lab/data/scene_datasets/'
-#config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
-#config.TASK.SENSORS.append("HEADING_SENSOR")
+config.DATASET.DATA_PATH = cfg.GENERAL.HABITAT_EPISODE_DATA_PATH
+config.DATASET.SCENES_DIR = cfg.GENERAL.HABITAT_SCENE_DATA_PATH
 config.freeze()
 env = SimpleRLEnv(config=config)
 
@@ -44,10 +42,10 @@ for episode_id in range(5):
 		#=============================== traverse each floor ===========================
 		print(f'*****scene_name = {scene_name}***********')
 
-		output_folder = 'output/TESTING_RESULTS_LEARNED_PRIOR'
+		output_folder = cfg.SAVE.TESTING_RESULTS_FOLDER
 		scene_output_folder = f'{output_folder}/{scene_name}'
 		create_folder(scene_output_folder)
-		testing_data = np.load(f'output/TESTING_DATA/testing_episodes_{scene_name}.npy', allow_pickle=True)
+		testing_data = np.load(f'{cfg.SAVE.TESTING_DATA_FOLDER}/testing_episodes_{scene_name}.npy', allow_pickle=True)
 
 		#'''
 		results = {}
@@ -62,10 +60,10 @@ for episode_id in range(5):
 			create_folder(saved_folder, clean_up=True)
 			flag = False
 			steps = 0
-			try:
-				flag, steps = nav(env, idx, scene_name, height, start_pose, targets, target_cat, saved_folder)
-			except:
-				print(f'CCCCCCCCCCCCCC failed EPS {idx} DDDDDDDDDDDDDDD')
+			#try:
+			flag, steps = nav(env, idx, scene_name, height, start_pose, targets, target_cat, saved_folder)
+			#except:
+			#print(f'CCCCCCCCCCCCCC failed EPS {idx} DDDDDDDDDDDDDDD')
 
 			result = {}
 			result['eps_id'] = idx

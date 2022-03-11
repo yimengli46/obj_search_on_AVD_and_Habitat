@@ -7,35 +7,29 @@ import skimage.measure
 from math import floor, sqrt
 import random
 from localNavigator_Astar import TreeList, PriorityQueue, AStarSearch
+from core import cfg
 
+scene_list = cfg.GEN_TEST.SCENE_LIST
 
-#scene_list = ['Allensville_0']
-scene_list = ['Collierville_1', 'Darden_0', 'Markleeville_0', 'Wiconisco_0']
-
-NUM_EXAMPLES = 100
 cat2idx_dict = get_class_mapper()
 idx2cat_dict = {v: k for k, v in cat2idx_dict.items()}
-ALLOWED_CATS = ['couch', 'potted_plant', 'refrigerator', 'oven', 'tv', 'chair', 'vase', 'potted plant', \
-	'toilet', 'clock', 'cup', 'bottle', 'bed', 'sink']
 
 for scene_name in scene_list:
-	SEED = 5
-	random.seed(SEED)
-	np.random.seed(SEED)
+	random.seed(cfg.GENERAL.RANDOM_SEED)
+	np.random.seed(cfg.GENERAL.RANDOM_SEED)
 
 	#============================== load gt semantic map and find obj centers =============================
-	sem_map_npy = np.load(f'output/gt_semantic_map_from_SceneGraph/{scene_name}/gt_semantic_map.npy', allow_pickle=True).item()
+	sem_map_npy = np.load(f'{cfg.SAVE.SEM_MAP_FROM_SCENE_GRAPH_PATH}/{scene_name}/gt_semantic_map.npy', allow_pickle=True).item()
 	gt_semantic_map, pose_range, coords_range = read_map_npy(sem_map_npy)
 
 	H, W = gt_semantic_map.shape
-	observed_semantic_map = cv2.resize(gt_semantic_map, (int(W*10), int(H*10)), interpolation=cv2.INTER_NEAREST)
+	observed_semantic_map = cv2.resize(gt_semantic_map, (int(W*cfg.SEM_MAP.ENLARGE_SIZE), int(H*cfg.SEM_MAP.ENLARGE_SIZE)), interpolation=cv2.INTER_NEAREST)
 	H, W = observed_semantic_map.shape
 	x = np.linspace(0, W-1, W)
 	y = np.linspace(0, H-1, H)
 	xv, yv = np.meshgrid(x, y)
-	IGNORED_CLASS = [0, 59]
 	cat_binary_map = observed_semantic_map.copy()
-	for cat in IGNORED_CLASS:
+	for cat in cfg.SEM_MAP.IGNORED_CLASS:
 		cat_binary_map = np.where(cat_binary_map==cat, -1, cat_binary_map)
 	# run skimage to find the number of objects belong to this class
 	instance_label, num_ins = skimage.measure.label(cat_binary_map, background=-1, connectivity=1, return_num=True)
@@ -43,7 +37,7 @@ for scene_name in scene_list:
 	list_instances = []
 	for idx_ins in range(1, num_ins+1):
 		mask_ins = (instance_label == idx_ins)
-		if np.sum(mask_ins) > 100: # should have at least 50 pixels
+		if np.sum(mask_ins) > cfg.SEM_MAP.OBJECT_MASK_PIXEL_THRESH: # should have at least 50 pixels
 			#print(f'idx_ins = {idx_ins}')
 			x_coords = xv[mask_ins]
 			y_coords = yv[mask_ins]
@@ -64,7 +58,7 @@ for scene_name in scene_list:
 
 	#================================ load occupancy map ===========================
 	# load occupancy map
-	occ_map_path = f'output/semantic_map/{scene_name}'
+	occ_map_path = f'{cfg.SAVE.OCCUPANCY_MAP_PATH}/{scene_name}'
 	occupancy_map = np.load(f'{occ_map_path}/BEV_occupancy_map.npy')
 
 	H, W = occupancy_map.shape
@@ -73,7 +67,7 @@ for scene_name in scene_list:
 	xv, yv = np.meshgrid(x, y)
 	map_coords = np.stack((xv, yv), axis=2).astype(np.int16)
 	# erode the occupancy map so the free space is smaller
-	kernel = np.ones((3,3), np.uint8)
+	kernel = np.ones((3, 3), np.uint8)
 	occupancy_map_erosion = cv2.erode(occupancy_map.astype(np.uint8), kernel, iterations=1)
 	mask_free = (occupancy_map_erosion == 1)
 	free_map_coords = map_coords[mask_free].tolist()
@@ -83,15 +77,15 @@ for scene_name in scene_list:
 	for idx, inst in enumerate(list_instances):
 		cat = inst['cat']
 		print(f'cat = {cat}')
-		if cat in ALLOWED_CATS:
+		if cat in cfg.GEN_TEST.ALLOWED_CATS:
 			EXISTING_CATS.add(cat)
 	EXISTING_CATS = list(EXISTING_CATS)
 
 	#=============================== sample examples ===================================
-	sem_map_npy = np.load(f'output/gt_semantic_map_from_SceneGraph/{scene_name}/gt_semantic_map.npy', allow_pickle=True).item()
+	sem_map_npy = np.load(f'{cfg.SAVE.SEM_MAP_FROM_SCENE_GRAPH_PATH}/{scene_name}/gt_semantic_map.npy', allow_pickle=True).item()
 	gt_semantic_map, pose_range, coords_range = read_map_npy(sem_map_npy)
 	observed_area_flag = (occupancy_map > 0)
-	gt_semantic_map[observed_area_flag] = 59
+	gt_semantic_map[observed_area_flag] = cfg.SEM_MAP.UNDETECTED_PIXELS_CLASS
 	color_gt_semantic_map = apply_color_to_map(gt_semantic_map)
 	#observed_area_flag = (occupancy_map > 0)
 	#color_gt_semantic_map = change_brightness(color_gt_semantic_map, observed_area_flag, value=60)
@@ -99,7 +93,7 @@ for scene_name in scene_list:
 
 	testing_data = []
 
-	for i in range(NUM_EXAMPLES):
+	for i in range(cfg.GEN_TEST.NUM_EPISODES):
 		# sample a cat
 		cat = random.choice(EXISTING_CATS)
 		print(f'eps = {i}, target = {cat}')
@@ -134,6 +128,6 @@ for scene_name in scene_list:
 		plt.show()
 		'''
 
-	np.save(f'output/TESTING_DATA/testing_episodes_{scene_name}.npy', testing_data)
+	np.save(f'{cfg.SAVE.TESTING_DATA_FOLDER}/testing_episodes_{scene_name}.npy', testing_data)
 
 

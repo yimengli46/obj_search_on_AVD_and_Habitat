@@ -9,17 +9,15 @@ from math import floor, sqrt
 from sklearn.mixture import GaussianMixture
 from navigation_utils import change_brightness
 from matplotlib.colors import LogNorm
+from core import cfg
 
-mode = 'semantic_prior'
-flag_visualize_ins_weights = True
-flag_visualize_peaks = True
 
 cat2idx_dict = get_class_mapper()
 idx2cat_dict = {v: k for k, v in cat2idx_dict.items()}
 print(f'idx2cat = {idx2cat_dict}')
 
 #================================= load the weight prior =================
-weight_prior = np.load(f'output/semantic_prior/weight_prior.npy', allow_pickle=True).item()
+weight_prior = np.load(f'{cfg.PF.SEMANTIC_PRIOR_PATH}/weight_prior.npy', allow_pickle=True).item()
 
 def get_cooccurred_object_weight(target_obj, relevant_obj):
 	if target_obj in weight_prior:
@@ -31,13 +29,13 @@ def get_cooccurred_object_weight(target_obj, relevant_obj):
 
 def compute_centers(observed_semantic_map):
 	H, W = observed_semantic_map.shape
-	observed_semantic_map = cv2.resize(observed_semantic_map, (int(W*10), int(H*10)), interpolation=cv2.INTER_NEAREST)
+	observed_semantic_map = cv2.resize(observed_semantic_map, (int(W*cfg.SEM_MAP.ENLARGE_SIZE), int(H*cfg.SEM_MAP.ENLARGE_SIZE)), interpolation=cv2.INTER_NEAREST)
 	H, W = observed_semantic_map.shape
 	x = np.linspace(0, W-1, W)
 	y = np.linspace(0, H-1, H)
 	xv, yv = np.meshgrid(x, y)
 	#====================================== compute centers of semantic classes =====================================
-	IGNORED_CLASS = [0, 59]
+	IGNORED_CLASS = cfg.SEM_MAP.IGNORED_MAP_CLASS
 	cat_binary_map = observed_semantic_map.copy()
 	for cat in IGNORED_CLASS:
 		cat_binary_map = np.where(cat_binary_map==cat, -1, cat_binary_map)
@@ -101,7 +99,7 @@ def confirm_nComponents(X):
 	bics = []
 	min_bic = 0
 	counter = 1
-	maximum_nComponents = min(len(X), 10)
+	maximum_nComponents = min(len(X), cfg.PF.MAXIMUM_COMPONENTS)
 	for i in range (1, maximum_nComponents): # test the AIC/BIC metric between 1 and 10 components
 		gmm = GaussianMixture(n_components=counter, max_iter=1000, random_state=0, covariance_type = 'full').fit(X)
 		bic = gmm.bic(X)
@@ -218,7 +216,7 @@ class ParticleFilter():
 		self.peaks_poses = []
 
 		# load built semantic map
-		self.built_sem_map = np.load(f'output/semantic_map/{self.scene_name}/BEV_semantic_map.npy', allow_pickle=True).item()['semantic_map']
+		self.built_sem_map = np.load(f'{cfg.SAVE.SEM_MAP_PATH}/{self.scene_name}/BEV_semantic_map.npy', allow_pickle=True).item()['semantic_map']
 
 	def initializeUniformly(self):
 		"""
@@ -258,7 +256,7 @@ class ParticleFilter():
 		semantic_map = self.semantic_map.copy()
 		semantic_map[observed_area_flag == False] = 0
 		mask_observed_and_non_obj = np.logical_and(observed_area_flag, semantic_map == 0)
-		semantic_map[mask_observed_and_non_obj] = 59
+		semantic_map[mask_observed_and_non_obj] = cfg.SEM_MAP.UNDETECTED_PIXELS_CLASS
 		color_semantic_map = apply_color_to_map(semantic_map)
 		#plt.imshow(color_semantic_map)
 		#plt.show()
@@ -329,7 +327,7 @@ class ParticleFilter():
 		weights.normalize()
 
 		#=================================== resample ================================
-		if flag_visualize_ins_weights:
+		if cfg.PF.FLAG_VISUALIZE_INS_WEIGHTS:
 			color_semantic_map = apply_color_to_map(semantic_map)
 			color_semantic_map = change_brightness(color_semantic_map, observed_area_flag, value=60)
 
@@ -366,7 +364,7 @@ class ParticleFilter():
 		chosen_peak_pose = self.peaks_poses[self.chosen_peak_idx]
 		
 		#===================================== visualize particles and the peak =============================
-		if flag_visualize_peaks:
+		if cfg.PF.FLAG_VISUALIZE_PEAKS:
 			fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 12))
 			ax.get_xaxis().set_visible(False)
 			ax.get_yaxis().set_visible(False)

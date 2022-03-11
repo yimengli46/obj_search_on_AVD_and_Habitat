@@ -7,46 +7,40 @@ from math import cos, sin, acos, atan2, pi, floor
 from baseline_utils import project_pixels_to_world_coords, convertPanopSegToSSeg, apply_color_to_map, pose_to_coords
 from panoptic_prediction import PanopPred
 from baseline_utils import pose_to_coords_frame, pxl_coords_to_pose
-
+from core import cfg
 
 class SemanticMap:
 	def __init__(self, scene_name, pose_range, coords_range):
-
-		self.dataset_dir = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/Gibson_Discretized_Dataset'
 		self.scene_name = scene_name
-		self.cell_size = 0.1
-		self.UNIGNORED_CLASS = []
-		self.saved_folder = 'results'
-		self.step_size = 100
-		self.map_boundary = 5
-		self.detector = 'PanopticSeg'
+		self.cell_size = cfg.SEM_MAP.CELL_SIZE
+		self.detector = cfg.NAVI.DETECTOR
 		self.panop_pred = PanopPred()
 		self.pose_range = pose_range
 		self.coords_range = coords_range
 		self.occupied_poses = [] # detected during navigation
 
-		self.IGNORED_CLASS = [54] # ceiling class is ignored
-		self.UNDETECTED_PIXELS_CLASS = 59
+		self.IGNORED_CLASS = cfg.SEM_MAP.IGNORED_SEM_CLASS # ceiling class is ignored
+		self.UNDETECTED_PIXELS_CLASS = cfg.SEM_MAP.UNDETECTED_PIXELS_CLASS
 
 		self.id2class_mapper = np.load('configs/COCO_PanopticSeg_labels_dict.npy', allow_pickle=True).item()
 
 		# load occupancy map
-		occ_map_path = f'output/semantic_map/{self.scene_name}'
+		occ_map_path = f'{cfg.SAVE.OCCUPANCY_MAP_PATH}/{self.scene_name}'
 		self.occupancy_map = np.load(f'{occ_map_path}/BEV_occupancy_map.npy')
 		#kernel = np.ones((5,5), np.uint8)
 		#self.occupancy_map = cv2.erode(occupancy_map.astype(np.uint8), kernel, iterations=1)
 		print(f'self.occupancy_map.shape = {self.occupancy_map.shape}')
 		
 		# ==================================== initialize 4d grid =================================
-		self.min_X = -30.0
-		self.max_X = 30.0
-		self.min_Z = -30.0
-		self.max_Z = 30.0
+		self.min_X = -cfg.SEM_MAP.WORLD_SIZE
+		self.max_X = cfg.SEM_MAP.WORLD_SIZE
+		self.min_Z = -cfg.SEM_MAP.WORLD_SIZE
+		self.max_Z = cfg.SEM_MAP.WORLD_SIZE
 
 		self.x_grid = np.arange(self.min_X, self.max_X, self.cell_size)
 		self.z_grid = np.arange(self.min_Z, self.max_Z, self.cell_size)
 
-		self.four_dim_grid = np.zeros((len(self.z_grid), 100, len(self.x_grid), 100), dtype=np.int16) # x, y, z, C
+		self.four_dim_grid = np.zeros((len(self.z_grid), cfg.SEM_MAP.GRID_Y_SIZE, len(self.x_grid), cfg.SEM_MAP.GRID_CLASS_SIZE), dtype=np.int16) # x, y, z, C
 		self.H, self.W = len(self.z_grid), len(self.x_grid)
 
 	def build_semantic_map(self, obs, pose, step=0, saved_folder=''):
@@ -63,7 +57,7 @@ class SemanticMap:
 
 		#'''
 		#if step % 10 == 0:
-		if False:
+		if cfg.SEM_MAP.FLAG_VISUALIZE_EGO_OBS:
 			fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(15, 6))
 			ax[0].imshow(rgb_img)
 			ax[0].get_xaxis().set_visible(False)
@@ -95,7 +89,7 @@ class SemanticMap:
 		x_coord = np.floor((xyz_points[0, :] - self.min_X) / self.cell_size).astype(int)
 		y_coord = np.floor(xyz_points[1, :] / self.cell_size).astype(int)
 		z_coord = np.floor((xyz_points[2, :] - self.min_Z) / self.cell_size).astype(int)
-		mask_y_coord = y_coord < 1000
+		mask_y_coord = y_coord < cfg.SEM_MAP.GRID_Y_SIZE
 		x_coord = x_coord[mask_y_coord]
 		y_coord = y_coord[mask_y_coord]
 		z_coord = z_coord[mask_y_coord]
