@@ -12,11 +12,11 @@ from habitat.tasks.utils import cartesian_to_polar, quaternion_rotate_vector
 import random
 from panoptic_prediction import PanopPred
 from navigation_utils import SimpleRLEnv, get_scene_name
+from core import cfg
 
 #=========================================== fix the habitat scene shuffle ===============================
-SEED = 5
-random.seed(SEED)
-np.random.seed(SEED)
+random.seed(cfg.GENERAL.RANDOM_SEED)
+np.random.seed(cfg.GENERAL.RANDOM_SEED)
 
 scene_list = ['Allensville_0']
 #scene_list = ['Collierville_1']
@@ -31,13 +31,13 @@ for scene in scene_list:
 	temp['floor'] = floor 
 	scene_dict[scene_name] = temp
 
-output_folder = 'output/semantic_map'
+output_folder = cfg.SAVE.SEM_MAP_PATH
 # after testing, using 8 angles is most efficient
 theta_lst = [0, pi/4, pi/2, pi*3./4, pi, pi*5./4, pi*3./2, pi*7./4]
 #theta_lst = [0]
 str_theta_lst = ['000', '090', '180', '270']
 
-scene_heights_dict = np.load(f'/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/scene_height_distribution/scene_heights.npy', allow_pickle=True).item()
+scene_heights_dict = np.load(cfg.GENERAL.SCENE_HEIGHTS_DICT_PATH, allow_pickle=True).item()
 
 #============================= build a grid =========================================
 x = np.arange(-30, 30, 0.3)
@@ -51,11 +51,10 @@ grid_H, grid_W = zv.shape
 
 panop_pred = PanopPred()
 
-config = habitat.get_config(config_paths="/home/yimeng/Datasets/habitat-lab/configs/tasks/devendra_objectnav_gibson.yaml")
+config = habitat.get_config(config_paths=cfg.GENERAL.HABITAT_CONFIG_PATH)
 config.defrost()
-#assert 1==2
-config.DATASET.DATA_PATH = '/home/yimeng/Datasets/habitat-lab/data/datasets/objectnav/gibson/all.json.gz'
-config.DATASET.SCENES_DIR = '/home/yimeng/Datasets/habitat-lab/data/scene_datasets/'
+config.DATASET.DATA_PATH = cfg.GENERAL.HABITAT_EPISODE_DATA_PATH
+config.DATASET.SCENES_DIR = cfg.GENERAL.HABITAT_SCENE_DATA_PATH
 config.freeze()
 env = SimpleRLEnv(config=config)
 
@@ -132,6 +131,6 @@ for episode_id in range(5):
 						count_ += 1
 
 
-		SemMap.save_final_map()
+		SemMap.save_final_sem_map()
 
 env.close()

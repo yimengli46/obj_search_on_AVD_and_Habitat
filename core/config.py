@@ -14,6 +14,7 @@ _C.GENERAL.RANDOM_SEED = 5
 _C.SAVE = CN()
 _C.SAVE.SEM_MAP_FROM_SCENE_GRAPH_PATH = 'output/gt_semantic_map_from_SceneGraph'
 _C.SAVE.SEM_MAP_PATH = 'output/semantic_map' # built semantic map
+_C.SAVE.SEM_MAP_CONTINUOUS_PATH = 'output/semantic_map_continuous' # built semantic map
 _C.SAVE.OCCUPANCY_MAP_PATH = 'output/semantic_map' # built occupancy map
 _C.SAVE.TESTING_DATA_FOLDER = 'output/TESTING_DATA'
 _C.SAVE.TESTING_RESULTS_FOLDER = 'output/TESTING_RESULTS_TEST_CONFIG'
@@ -41,6 +42,13 @@ _C.SEM_MAP.CELL_SIZE = 0.1
 _C.SEM_MAP.WORLD_SIZE = 30.0 # world model size in each dimension (left, right, top , bottom)
 _C.SEM_MAP.GRID_Y_SIZE = 100
 _C.SEM_MAP.GRID_CLASS_SIZE = 100
+
+
+#=============================== for build semantic map =============================
+_C.BUILD_SEM_MAP = CN()
+_C.BUILD_SEM_MAP.VISUALIZE_STEP = 100 # visualize the observation after each X steps
+_C.BUILD_SEM_MAP.MAP_BOUNDARY   = 5
+
 
 #=============================== for navigator ====================================
 _C.NAVI = CN()
