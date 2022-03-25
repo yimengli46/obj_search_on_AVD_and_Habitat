@@ -424,7 +424,7 @@ class localNav_Astar:
 		#print(f'path_idx = {self.path_idx}, path_pose_action = {self.path_pose_action}')
 		return True, subgoal_coords, subgoal_pose
 
-	def next_action(self, occupancy_map, env, height):
+	def next_action(self, env, height):
 		'''
 		# visualize on occupancy map
 		path_pose = self.path_poses[-1]
@@ -668,6 +668,19 @@ class localNav_Astar:
 				poses.append(pose)
 		
 		assert len(poses) == (len(actions) + 1)
+
+		self.path_idx = 1
+		self.path_pose_action = []
+		for i in range(0, len(poses)):
+			pose = poses[i]
+			# convert planner pose to environment pose
+			rot = -planner_rot_to_map_rot(pose[2])
+			new_pose = (pose[0], -pose[1], rot)
+			if i == 0:
+				action = ""
+			else:
+				action = actions[i-1]
+			self.path_pose_action.append((new_pose, action))
 
 		return len(actions)
 

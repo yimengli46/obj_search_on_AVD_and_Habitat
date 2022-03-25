@@ -78,3 +78,17 @@ _C.SEM_MAP.FLAG_VISUALIZE_EGO_OBS = False
 _C.PF.FLAG_VISUALIZE_INS_WEIGHTS = True
 _C.PF.FLAG_VISUALIZE_PEAKS = True
 _C.LN.FLAG_VISUALIZE_LOCAL_MAP = False
+
+
+
+
+
+#=============================== for learned occupancy map =============================
+_C.MAP = CN()
+_C.MAP.N_SPATIAL_CLASSES = 3 # number of categories for spatial prediction, free, unknown, occupied
+_C.MAP.MAP_LOSS_SCALE = 1.0
+_C.MAP.GRID_DIM = 768 # semantic grid size (grid_dim, grid_dim)
+_C.MAP.CROP_SIZE = 160 # size of crop around the agent
+_C.MAP.CELL_SIZE = 0.05 # Physical dimensions (meters) of each cell in the grid'
+_C.MAP.IMG_SIZE = 256 
+_C.MAP.OCCUPANCY_HEIGHT_THRESH = -1.0 # used when estimating occupancy from depth
