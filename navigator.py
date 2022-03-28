@@ -63,6 +63,7 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 	GOAL_list = targets
 	GOAL_POSE_list = [a for (a, b) in GOAL_list]
 	gt_number_steps = -1
+	peaks_coords = None
 
 	while step < cfg.NAVI.NUM_STEPS:
 		print(f'step = {step}')
@@ -140,7 +141,7 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 		if MODE_FIND_SUBGOAL:
 			PF.observeUpdate(observed_area_flag, step, saved_folder)
 			# get the peak global coordinates from particle filter
-			peak_pose = PF.getPeak(step, saved_folder)
+			peak_pose, peaks_coords = PF.getPeak(step, saved_folder)
 			#assert 1==2
 			#peak_pose = (7.38, 3.42)
 			print(f'peak_pose = {peak_pose}')
@@ -164,33 +165,25 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 				theta_lst.append(cur_pose[2])
 
 			#'''
-			fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(20, 20))
+			fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 10))
 			# visualize gt semantic map
-			ax[0][0].imshow(color_gt_semantic_map)
-			ax[0][0].get_xaxis().set_visible(False)
-			ax[0][0].get_yaxis().set_visible(False)
+			ax.imshow(color_gt_semantic_map)
+			ax.get_xaxis().set_visible(False)
+			ax.get_yaxis().set_visible(False)
 			#ax[0][0].scatter(x_coord_lst, z_coord_lst, s=30, c='red', zorder=2)
 			marker, scale = gen_arrow_head_marker(theta_lst[-1])
-			ax[0][0].scatter(x_coord_lst[-1], z_coord_lst[-1], marker=marker, s=(30*scale)**2, c='red', zorder=2)
-			ax[0][0].plot(x_coord_lst, z_coord_lst, lw=5, c='blue', zorder=1)
+			ax.scatter(x_coord_lst[-1], z_coord_lst[-1], marker=marker, s=(30*scale)**2, c='red', zorder=2)
+			ax.plot(x_coord_lst, z_coord_lst, lw=5, c='blue', zorder=1)
 			# draw the subgoal
 			if subgoal_coords is not None:
-				ax[0][0].scatter(subgoal_coords[0], subgoal_coords[1], marker='X', s=50, c='yellow', zorder=3)
+				ax.scatter(subgoal_coords[0], subgoal_coords[1], marker='X', s=70, c='yellow', zorder=4)
+			if peaks_coords is not None:
+				ax.scatter(peaks_coords[:, 0], peaks_coords[:, 1], marker='D', s=50, c='white', zorder=3)
 			# draw the object goal
 			np_target_poses = np.array(list(map(list, GOAL_POSE_list)))
 			vis_target_coords = pose_to_coords_numpy(np_target_poses, pose_range, coords_range)
-			ax[0][0].scatter(vis_target_coords[:, 0], vis_target_coords[:, 1], marker='*', s=50, c='yellow', zorder=3)
-			ax[0][0].set_title('gt semantic map')
-			# visualize built semantic map
-			ax[0][1].imshow(color_built_semantic_map)
-			ax[0][1].get_xaxis().set_visible(False)
-			ax[0][1].get_yaxis().set_visible(False)
-			ax[0][1].set_title('built semantic map')
-
-			ax[1][0].imshow(occupancy_map, vmax=3)
-			ax[1][0].get_xaxis().set_visible(False)
-			ax[1][0].get_yaxis().set_visible(False)
-			ax[1][0].set_title('occupancy map')
+			ax.scatter(vis_target_coords[:, 0], vis_target_coords[:, 1], marker='*', s=50, c='yellow', zorder=4)
+			ax.set_title('gt semantic map')
 			fig.tight_layout()
 			plt.title('observed area')
 			#plt.show()

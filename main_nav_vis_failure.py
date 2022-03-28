@@ -45,7 +45,7 @@ for episode_id in range(5):
 		print(f'*****scene_name = {scene_name}***********')
 
 		try:
-			output_folder = 'output/TESTING_RESULTS_LEARNED_PRIOR_VIS_FAILURE'
+			output_folder = 'output/TESTING_RESULTS_VIS_PEAKS'
 			scene_output_folder = f'{output_folder}/{scene_name}'
 			create_folder(scene_output_folder)
 			testing_data = np.load(f'output/TESTING_DATA/testing_episodes_{scene_name}.npy', allow_pickle=True)
@@ -55,7 +55,7 @@ for episode_id in range(5):
 			results = {}
 			for idx in range(len(testing_data)):
 			#for idx in range(1, 2):
-				if not existing_results[idx]['success']:
+				if not existing_results[idx]['success'] or existing_results[idx]['steps'] > 600:
 					data = testing_data[idx]
 					print(f'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA EPS {idx} BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB')
 					start_pose, target_cat, targets, gt_steps = data

@@ -378,7 +378,7 @@ class ParticleFilter():
 			fig.savefig(f'{saved_folder}/step_{step}_peak.jpg')
 			plt.close()
 
-		return chosen_peak_pose
+		return chosen_peak_pose, peaks_coords
 
 	def getNextPeak(self, step, saved_folder):
 		self.chosen_peak_idx += 1

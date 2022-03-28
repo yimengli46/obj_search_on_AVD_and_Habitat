@@ -67,6 +67,6 @@ _C.DETECTRON2 = CN()
 #================================ for visualization ============================
 _C.NAVI.NUM_STEPS_VIS = 20 # visualize the traj after every X steps
 _C.SEM_MAP.FLAG_VISUALIZE_EGO_OBS = False
-_C.PF.FLAG_VISUALIZE_INS_WEIGHTS = True
-_C.PF.FLAG_VISUALIZE_PEAKS = True
+_C.PF.FLAG_VISUALIZE_INS_WEIGHTS = False
+_C.PF.FLAG_VISUALIZE_PEAKS = False
 _C.LN.FLAG_VISUALIZE_LOCAL_MAP = False
