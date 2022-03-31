@@ -87,7 +87,6 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 			gt_number_steps = min(lst_gt_number_steps)
 			print(f'closest goal is {gt_number_steps} steps away!')
 
-
 		# add the observed area
 		semMap_module.build_semantic_map(obs, pose, step=step, saved_folder=saved_folder)
 		#assert 1==2
@@ -122,7 +121,6 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 			#==================================== visualize the path on the map ==============================
 			built_semantic_map, observed_area_flag, occupancy_map = semMap_module.get_semantic_map()
 
-			
 			## for the explored free space visualization
 			mask_observed_and_non_obj = np.logical_and(observed_area_flag, gt_semantic_map == 0)
 			gt_semantic_map[mask_observed_and_non_obj] = 59 # class index for explored non-object area

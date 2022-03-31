@@ -2,7 +2,7 @@ import itertools
 import random
 import numpy as np
 import matplotlib.pyplot as plt
-from baseline_utils import pxl_coords_to_pose_numpy, pose_to_coords, get_class_mapper, pxl_coords_to_pose, pose_to_coords_numpy, apply_color_to_map, pose_to_coords_frame_numpy, pose_to_coords_frame
+from baseline_utils import pxl_coords_to_pose_numpy, pose_to_coords, get_class_mapper, pxl_coords_to_pose, pose_to_coords_numpy, apply_color_to_map, pose_to_coords_frame_numpy, pose_to_coords_frame, get_room_class_mapper, read_map_npy
 import skimage.measure
 import cv2
 from math import floor, sqrt
@@ -16,14 +16,26 @@ cat2idx_dict = get_class_mapper()
 idx2cat_dict = {v: k for k, v in cat2idx_dict.items()}
 print(f'idx2cat = {idx2cat_dict}')
 
+room2idx_dict = get_room_class_mapper()
+idx2room_dict = {v: k for k, v in room2idx_dict.items()}
+
 #================================= load the weight prior =================
 weight_prior = np.load(f'{cfg.PF.SEMANTIC_PRIOR_PATH}/weight_prior.npy', allow_pickle=True).item()
+obj_room_weight_prior = np.load(f'{cfg.PF.SEMANTIC_PRIOR_PATH}/obj_room_weight_prior.npy', allow_pickle=True).item()
 
 def get_cooccurred_object_weight(target_obj, relevant_obj):
 	if target_obj in weight_prior:
 		weights = weight_prior[target_obj]
 		for a, b in weights:
 			if a == relevant_obj:
+				return b
+	return 0.
+
+def get_cooccurred_room_weight(target_obj, relevant_room):
+	if target_obj in obj_room_weight_prior:
+		weights = obj_room_weight_prior[target_obj]
+		for a, b in weights:
+			if a == relevant_room:
 				return b
 	return 0.
 
@@ -95,6 +107,7 @@ def visualize_GMM_dist(weight, size, inst_pose, particles, particle_weights, fla
 		else:
 			particle_weights[particle] = P_e_X
 
+
 def confirm_nComponents(X):
 	bics = []
 	min_bic = 0
@@ -110,6 +123,25 @@ def confirm_nComponents(X):
 
 		counter += 1
 	return opt_bic
+
+def get_observed_room_map(observed_room, observed_area_flag):
+	IGNORED_CLASS = cfg.SEM_MAP.IGNORED_ROOM_CLASS
+	cat_binary_map = observed_room.copy()
+	for cat in IGNORED_CLASS:
+		cat_binary_map = np.where(cat_binary_map==cat, -1, cat_binary_map)
+	# run skimage to find the number of objects belong to this class
+	instance_label, num_ins = skimage.measure.label(cat_binary_map, background=-1, connectivity=1, return_num=True)
+
+	list_instances = []
+	for idx_ins in range(1, num_ins+1):
+		mask_ins = (instance_label == idx_ins)
+		
+		mask_ins_and_observed_area = np.logical_and(mask_ins, observed_area_flag)
+		if np.sum(mask_ins_and_observed_area) == 0:
+			observed_room[mask_ins] = 0
+
+	return observed_room
+
 
 class DiscreteDistribution(dict):
 	"""
@@ -218,6 +250,11 @@ class ParticleFilter():
 		# load built semantic map
 		self.built_sem_map = np.load(f'{cfg.SAVE.SEM_MAP_PATH}/{self.scene_name}/BEV_semantic_map.npy', allow_pickle=True).item()['semantic_map']
 
+		# load room type map
+		if cfg.NAVI.USE_ROOM_TYPES:
+			sem_map_room_npy = np.load(f'{cfg.SAVE.SEM_MAP_FROM_SCENE_GRAPH_PATH}/{scene_name}/gt_semantic_map_rooms.npy', allow_pickle=True).item()
+			self.gt_semantic_map_room, _, _ = read_map_npy(sem_map_room_npy)
+
 	def initializeUniformly(self):
 		"""
 		Initialize a list of particles. Use self.numParticles for the number of
@@ -284,7 +321,7 @@ class ParticleFilter():
 			fig.savefig(f'{saved_folder}/step_{step}_detected_centers.jpg')
 			plt.close()
 		
-		#========================================= Compute Priors ===========================================
+		#========================================= Compute Obj-Obj Priors ===========================================
 		for idx, inst in enumerate(list_instances):
 			inst_pose = pxl_coords_to_pose(inst['center'], self.pose_range, self.coords_range, flag_cropped=True)
 			k1 = idx2cat_dict[inst['cat']]
@@ -297,6 +334,10 @@ class ParticleFilter():
 				# load GMM
 				if weight_k1 > 0:
 					visualize_GMM_dist(weight_k1, inst['size'], inst_pose, self.particles, weights)
+
+		#==================================== Compute Room-Obj Priors =========================================
+		if cfg.NAVI.USE_ROOM_TYPES:
+			self.change_particle_weights_given_room_types(weights, self.gt_semantic_map_room.copy(), observed_area_flag.copy())
 
 		#==================================== visualization ====================================
 		if False:
@@ -352,6 +393,30 @@ class ParticleFilter():
 			poses = weights.sample(self.numParticles)
 			print(f'len(poses) = {len(poses)}')
 			self.particles = poses
+
+	def change_particle_weights_given_room_types(self, particle_weights, gt_semantic_map_room, observed_area_flag):
+		sem_map_observed_room = get_observed_room_map(gt_semantic_map_room.copy(), observed_area_flag.copy())
+		
+		#particle_coords = pose_to_coords_frame_numpy(self.particles, self.pose_range, self.coords_range)
+
+		for idx, particle in enumerate(self.particles):
+			particle_x, particle_y = pose_to_coords(particle, self.pose_range, self.coords_range)
+			#print(f'particle_x = {particle_x}, particle_y = {particle_y}')
+			P_e_X = 1.
+			
+			room_type_id = sem_map_observed_room[particle_y, particle_x]
+			if room_type_id > 0:
+				k1 = idx2room_dict[room_type_id]
+				weight = get_cooccurred_room_weight(self.k2, k1)
+				P_e_X *= weight
+				#print(f'k1 = {k1}, target = {self.k2}, weight = {weight}')
+			else:
+				P_e_X *= .1
+
+			if particle in particle_weights:
+				particle_weights[particle] += P_e_X
+			else:
+				particle_weights[particle] = P_e_X
 
 	def getPeak(self, step, saved_folder):
 		#===================================== finding the peak ================================

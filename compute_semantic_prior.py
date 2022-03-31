@@ -6,6 +6,8 @@ scene_names = list(scene_heights_dict.keys())
 
 semantic_prior_folder = f'output/semantic_prior'
 obj_list = np.load(f'{semantic_prior_folder}/all_objs_list.npy', allow_pickle=True)
+room_list = np.load(f'{semantic_prior_folder}/room_type_list.npy', allow_pickle=True)
+
 
 '''
 room_types = ['bathroom', 'bedroom', 'corridor', 'dining_room', 'kitchen', 'living_room', 'home_office']
@@ -57,7 +59,7 @@ for room_type in room_types:
 	#assert 1==2
 '''
 
-
+'''
 obj_obj_dict = {}
 for k1 in obj_list:
 	obj_obj_dict[k1] = {}
@@ -98,3 +100,48 @@ for idx, k, in enumerate(obj_list):
 				weight_prior[k].append((k2, weight))
 
 np.save(f'{semantic_prior_folder}/weight_prior.npy', weight_prior)
+'''
+
+#================================= compute obj and room prior ===================================
+obj_room_dict = {}
+for k1 in obj_list:
+	obj_room_dict[k1] = {}
+	for k2 in room_list:
+		obj_room_dict[k1][k2] = 0
+
+for scene_name in scene_names:
+	npy_file = np.load(f'{semantic_prior_folder}/{scene_name}_prior.npy', allow_pickle=True)
+
+	for idx in range(len(npy_file)):
+		tup = npy_file[idx]
+		if len(tup) > 4:
+			o1 = tup[0]
+			room = tup[6]
+			obj_room_dict[o1][room] += 1
+		else:
+			o1 = tup[0]
+			room = tup[3]
+			obj_room_dict[o1][room] += 1
+
+num_classes_obj = len(obj_list)
+num_classes_room = len(room_list)
+corr_mat_mu = np.zeros((num_classes_obj, num_classes_room))
+for idx_k1, k1 in enumerate(obj_list):
+	for idx_k2, k2 in enumerate(room_list):
+		corr_mat_mu[idx_k1][idx_k2] = obj_room_dict[k1][k2]
+
+sum_corr = np.sum(corr_mat_mu, axis=1)
+
+# compute weight
+weight_prior = {}
+for idx, k, in enumerate(obj_list):
+	weight_prior[k] = []
+
+	sum_row = sum_corr[idx]
+	if sum_row > 0:
+		for j, k2 in enumerate(room_list):
+			if corr_mat_mu[idx][j] > 0 and j != idx:
+				weight = corr_mat_mu[idx][j] / sum_row
+				weight_prior[k].append((k2, weight))
+
+np.save(f'{semantic_prior_folder}/obj_room_weight_prior.npy', weight_prior)

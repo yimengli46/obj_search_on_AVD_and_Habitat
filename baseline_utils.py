@@ -13,6 +13,7 @@ from io import StringIO
 import matplotlib.pyplot as plt
 from constants import coco_categories_mapping, panopticSeg_mapping, d3_41_colors_rgb, COCO_74_COLORS
 import matplotlib as mpl
+from core import cfg
 
 def minus_theta_fn(previous_theta, current_theta):
   result = current_theta - previous_theta
@@ -230,8 +231,13 @@ def get_class_mapper(dataset='gibson'):
       'shower','column','bathtub','counter','fireplace','lighting','beam','railing','shelving','blinds','gym_equipment', \
       'seating','board_panel','furniture','appliances','clothes','objects','misc']
   elif dataset == 'gibson':
-    categories = list(np.load(f'output/semantic_prior/all_objs_list.npy', allow_pickle=True))
+    categories = list(np.load(f'{cfg.PF.SEMANTIC_PRIOR_PATH}/all_objs_list.npy', allow_pickle=True))
   class_dict = {v: k+1 for k, v in enumerate(categories)}
+  return class_dict
+
+def get_room_class_mapper(dataset='gibson'):
+  room_list = np.load(f'{cfg.PF.SEMANTIC_PRIOR_PATH}/room_type_list.npy', allow_pickle=True)
+  class_dict = {v: k+1 for k, v in enumerate(room_list)}
   return class_dict
 
 def pxl_coords_to_pose(coords, pose_range, coords_range, cell_size=0.1, flag_cropped=True):

@@ -60,10 +60,10 @@ for episode_id in range(5):
 			create_folder(saved_folder, clean_up=True)
 			flag = False
 			steps = 0
-			#try:
-			flag, steps = nav(env, idx, scene_name, height, start_pose, targets, target_cat, saved_folder)
-			#except:
-			#print(f'CCCCCCCCCCCCCC failed EPS {idx} DDDDDDDDDDDDDDD')
+			try:
+				flag, steps = nav(env, idx, scene_name, height, start_pose, targets, target_cat, saved_folder)
+			except:
+				print(f'CCCCCCCCCCCCCC failed EPS {idx} DDDDDDDDDDDDDDD')
 
 			result = {}
 			result['eps_id'] = idx

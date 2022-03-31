@@ -16,7 +16,7 @@ _C.SAVE.SEM_MAP_FROM_SCENE_GRAPH_PATH = 'output/gt_semantic_map_from_SceneGraph'
 _C.SAVE.SEM_MAP_PATH = 'output/semantic_map' # built semantic map
 _C.SAVE.OCCUPANCY_MAP_PATH = 'output/semantic_map' # built occupancy map
 _C.SAVE.TESTING_DATA_FOLDER = 'output/TESTING_DATA'
-_C.SAVE.TESTING_RESULTS_FOLDER = 'output/TESTING_RESULTS_TEST_CONFIG'
+_C.SAVE.TESTING_RESULTS_FOLDER = 'output/TESTING_RESULTS_USE_ROOM_TYPES'
 
 #================================== for main_nav.py =====================
 _C.MAIN = CN()
@@ -34,6 +34,7 @@ _C.GEN_TEST.ALLOWED_CATS = ['couch', 'potted_plant', 'refrigerator', 'oven', 'tv
 _C.SEM_MAP = CN()
 _C.SEM_MAP.ENLARGE_SIZE = 10
 _C.SEM_MAP.IGNORED_MAP_CLASS = [0, 59]
+_C.SEM_MAP.IGNORED_ROOM_CLASS = [0] # ignored class on the room type map
 _C.SEM_MAP.IGNORED_SEM_CLASS = [54] # for semantic segmentation, class 54 is ceiling
 _C.SEM_MAP.OBJECT_MASK_PIXEL_THRESH = 100
 _C.SEM_MAP.UNDETECTED_PIXELS_CLASS = 59 # explored but semantic-unrecognized pixel
@@ -51,6 +52,8 @@ _C.NAVI.NUM_STEPS_EXPLORE = 30
 _C.NAVI.DETECTOR = 'PanopticSeg'
 _C.NAVI.THRESH_REACH = 0.8
 
+_C.NAVI.USE_ROOM_TYPES = True
+
 #============================ for particle filters ===============================
 _C.PF = CN()
 _C.PF.SEMANTIC_PRIOR_PATH = 'output/semantic_prior'
@@ -63,10 +66,9 @@ _C.LN.LOCAL_MAP_MARGIN = 30
 #================================ for Detectron2 ==============================
 _C.DETECTRON2 = CN()
 
-
 #================================ for visualization ============================
-_C.NAVI.NUM_STEPS_VIS = 20 # visualize the traj after every X steps
+_C.NAVI.NUM_STEPS_VIS = 50 # visualize the traj after every X steps
 _C.SEM_MAP.FLAG_VISUALIZE_EGO_OBS = False
-_C.PF.FLAG_VISUALIZE_INS_WEIGHTS = True
-_C.PF.FLAG_VISUALIZE_PEAKS = True
+_C.PF.FLAG_VISUALIZE_INS_WEIGHTS = False
+_C.PF.FLAG_VISUALIZE_PEAKS = False
 _C.LN.FLAG_VISUALIZE_LOCAL_MAP = False
