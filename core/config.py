@@ -5,7 +5,7 @@ _C = CN()
 #=============================== dataset and files =============================
 _C.GENERAL = CN()
 _C.GENERAL.SCENE_HEIGHTS_DICT_PATH = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/scene_height_distribution/scene_heights.npy'
-_C.GENERAL.HABITAT_CONFIG_PATH = "/home/yimeng/Datasets/habitat-lab/configs/tasks/devendra_objectnav_gibson.yaml" 
+_C.GENERAL.HABITAT_CONFIG_PATH = "/home/yimeng/Datasets/habitat-lab/configs/tasks/devendra_objectnav_gibson_see_the_floor.yaml" 
 _C.GENERAL.HABITAT_EPISODE_DATA_PATH = '/home/yimeng/Datasets/habitat-lab/data/datasets/objectnav/gibson/all.json.gz'
 _C.GENERAL.HABITAT_SCENE_DATA_PATH = '/home/yimeng/Datasets/habitat-lab/data/scene_datasets/'
 _C.GENERAL.RANDOM_SEED = 5
@@ -65,6 +65,14 @@ _C.LN.LOCAL_MAP_MARGIN = 30
 
 #================================ for Detectron2 ==============================
 _C.DETECTRON2 = CN()
+
+#================================ for Frontier Exploration ===========================
+_C.FE = CN()
+_C.FE.COLLISION_VAL = 1
+_C.FE.FREE_VAL = 3
+_C.FE.UNOBSERVED_VAL = 0
+_C.FE.OBSTACLE_THRESHOLD = 1
+_C.FE.GROUP_INFLATION_RADIUS = 0
 
 #================================ for visualization ============================
 _C.NAVI.NUM_STEPS_VIS = 50 # visualize the traj after every X steps

@@ -76,9 +76,8 @@ def project_pixels_to_camera_coords (sseg_img, current_depth, current_pose, gap=
   return points_3d, sseg_points.astype(int)
 
 
-def project_pixels_to_world_coords (sseg_img, current_depth, current_pose, gap=2, FOV=90, cx=320, cy=240, resolution_x=640, resolution_y=480, ignored_classes=[]):
+def project_pixels_to_world_coords (sseg_img, current_depth, current_pose, gap=2, FOV=79, cx=320, cy=240, theta_x=0.0, resolution_x=640, resolution_y=480, ignored_classes=[]):
   ## camera intrinsic matrix
-  FOV = 79
   radian = FOV * pi / 180.
   focal_length = cx/tan(radian/2)
   K = np.array([[focal_length, 0, cx], [0, focal_length, cy], [0, 0, 1]])
@@ -89,7 +88,10 @@ def project_pixels_to_world_coords (sseg_img, current_depth, current_pose, gap=2
   tx, tz, theta = current_pose
   #theta = -(theta + 0.5 * pi)
   #theta = -theta
-  R = np.array([[cos(theta), 0, sin(theta)], [0, 1, 0], [-sin(theta), 0, cos(theta)]])
+  R_y = np.array([[cos(theta), 0, sin(theta)], [0, 1, 0], [-sin(theta), 0, cos(theta)]])
+  # used when I tilt the camera up/down
+  R_x = np.array([[1, 0, 0], [0, cos(theta_x), -sin(theta_x)], [0, sin(theta_x), cos(theta_x)]])
+  R = R_y.dot(R_x)
   T = np.array([tx, 0, tz])
   transformation_matrix = np.empty((3, 4))
   transformation_matrix[:3, :3] = R

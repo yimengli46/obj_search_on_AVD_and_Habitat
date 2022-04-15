@@ -1,10 +1,11 @@
 import numpy as np 
+from core import cfg
 
 #scene_list = ['Allensville_0']
 scene_list = ['Collierville_1', 'Darden_0', 'Markleeville_0', 'Wiconisco_0']
 for scene_name in scene_list:
 	try:
-		output_folder = 'output/TESTING_RESULTS_LEARNED_PRIOR'
+		output_folder = cfg.SAVE.TESTING_RESULTS_FOLDER
 
 		results_npy = np.load(f'{output_folder}/results_{scene_name}.npy', allow_pickle=True).item()
 		num_test = len(results_npy.keys())

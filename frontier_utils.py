@@ -2,6 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from core import cfg
 import scipy.ndimage
+import numpy as np 
+import matplotlib.pyplot as plt
+from core import cfg
+import scipy.ndimage
+from baseline_utils import pose_to_coords
 
 class Frontier(object):
 	def __init__(self, points):
@@ -103,43 +108,75 @@ def mask_grid_with_frontiers(occupancy_grid, frontiers, do_not_mask=None):
 
 	return masked_grid
 
-scene_name = 'Allensville_0'
-occ_map_path = f'{cfg.SAVE.OCCUPANCY_MAP_PATH}/{scene_name}'
-occupancy_map = np.load(f'{occ_map_path}/BEV_occupancy_map.npy')
+def get_frontiers(occupancy_grid):
+	filtered_grid = scipy.ndimage.maximum_filter(occupancy_grid == cfg.FE.FREE_VAL, size=3)
+	frontier_point_mask = np.logical_and(filtered_grid, occupancy_grid == cfg.FE.UNOBSERVED_VAL)
 
-occupancy_grid = np.where(occupancy_map==1, 0, occupancy_map) # free cell
-occupancy_grid = np.where(occupancy_map==0, 1, occupancy_grid) # occupied cell
-occupancy_grid[0:50, 0:50] = -1
+	if cfg.FE.GROUP_INFLATION_RADIUS < 1:
+		inflated_frontier_mask = frontier_point_mask
+	else:
+		inflated_frontier_mask = gridmap.utils.inflate_grid(frontier_point_mask,
+			inflation_radius=cfg.FE.GROUP_INFLATION_RADIUS, obstacle_threshold=0.5,
+			collision_val=1.0) > 0.5
 
-COLLISION_VAL = 1
-FREE_VAL = 0
-UNOBSERVED_VAL = -1
-OBSTACLE_THRESHOLD = 0.5 * (COLLISION_VAL + FREE_VAL) 
-group_inflation_radius=0
+	# Group the frontier points into connected components
+	labels, nb = scipy.ndimage.label(inflated_frontier_mask)
 
-filtered_grid = scipy.ndimage.maximum_filter(np.logical_and(
-		occupancy_grid < OBSTACLE_THRESHOLD, occupancy_grid == FREE_VAL), size=3)
-frontier_point_mask = np.logical_and(filtered_grid, occupancy_grid == UNOBSERVED_VAL)
+	# Extract the frontiers
+	frontiers = set()
+	for ii in range(nb):
+		raw_frontier_indices = np.where(np.logical_and(labels == (ii + 1), frontier_point_mask))
+		frontiers.add(
+			Frontier(
+				np.concatenate((raw_frontier_indices[0][None, :],
+								raw_frontier_indices[1][None, :]),
+							   axis=0)))
 
-if group_inflation_radius < 1:
-	inflated_frontier_mask = frontier_point_mask
-else:
-	inflated_frontier_mask = gridmap.utils.inflate_grid(frontier_point_mask,
-		inflation_radius=group_inflation_radius, obstacle_threshold=0.5,
-		collision_val=1.0) > 0.5
+	return frontiers
 
-# Group the frontier points into connected components
-labels, nb = scipy.ndimage.label(inflated_frontier_mask)
+def remove_isolated_points(occupancy_grid, threshold=2):
+	H, W = occupancy_grid.shape
+	new_grid = occupancy_grid.copy()
+	for i in range(1, H-1):
+		for j in range(1, W-1):
+			if occupancy_grid[i][j] == cfg.FE.UNOBSERVED_VAL:
+				new_grid[i][j] = nearest_value_og(occupancy_grid, i, j, threshold=threshold)
+	return new_grid
 
-# Extract the frontiers
-frontiers = set()
-for ii in range(nb):
-	raw_frontier_indices = np.where(
-		np.logical_and(labels == (ii + 1), frontier_point_mask))
-	frontiers.add(
-		Frontier(
-			np.concatenate((raw_frontier_indices[0][None, :],
-							raw_frontier_indices[1][None, :]),
-						   axis=0)))
+def nearest_value_og(occupancy_grid, i, j, threshold=4):
+	d = {cfg.FE.COLLISION_VAL:0, cfg.FE.FREE_VAL:0, cfg.FE.UNOBSERVED_VAL:0}
+	d[occupancy_grid[i-1][j]] += 1
+	d[occupancy_grid[i+1][j]] += 1
+	d[occupancy_grid[i][j-1]] += 1
+	d[occupancy_grid[i][j+1]] += 1
+	  
+	for occupancy_value, count in d.items():
+		if count >= threshold:
+			return occupancy_value
+	return occupancy_grid[i][j]
 
-masked_grid = mask_grid_with_frontiers(occupancy_grid, frontiers)
+def get_frontier_with_maximum_area(frontiers, visited_frontiers, gt_occupancy_grid):
+	count_free_space_at_frontiers(frontiers, gt_occupancy_grid)
+	max_area = 0
+	max_fron = None
+	for fron in frontiers:
+		if fron not in visited_frontiers:
+			if fron.area_neigh > max_area:
+				max_area = fron.area_neigh
+				max_fron = fron
+
+	return max_fron
+
+
+def count_free_space_at_frontiers(frontiers, gt_occupancy_grid, area=10):
+	H, W = gt_occupancy_grid.shape
+	for fron in frontiers:
+		centroid = (int(fron.centroid[1]), int(fron.centroid[0]))
+		x1 = max(0, centroid[1] - area)
+		x2 = min(W, centroid[1] + area)
+		y1 = max(0, centroid[0] - area)
+		y2 = min(H, centroid[0] + area)
+		fron_neigh = gt_occupancy_grid[y1:y2, x1:x2]
+		fron.area_neigh = np.sum(fron_neigh == cfg.FE.FREE_VAL)
+
+
