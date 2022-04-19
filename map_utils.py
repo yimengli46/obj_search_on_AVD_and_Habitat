@@ -14,7 +14,8 @@ class SemanticMap:
 		self.scene_name = scene_name
 		self.cell_size = cfg.SEM_MAP.CELL_SIZE
 		self.detector = cfg.NAVI.DETECTOR
-		self.panop_pred = PanopPred()
+		if self.detector == 'PanopticSeg':
+			self.panop_pred = PanopPred()
 		self.pose_range = pose_range
 		self.coords_range = coords_range
 		self.occupied_poses = [] # detected during navigation
@@ -51,7 +52,9 @@ class SemanticMap:
 		if self.detector == 'PanopticSeg':
 			panopSeg_img, _ = self.panop_pred.get_prediction(rgb_img, flag_vis=False)
 			sseg_img = convertPanopSegToSSeg(panopSeg_img, self.id2class_mapper)
-		sseg_img = np.where(sseg_img==0, self.UNDETECTED_PIXELS_CLASS, sseg_img) # label 59 for pixels observed but undetected by the detector
+			sseg_img = np.where(sseg_img==0, self.UNDETECTED_PIXELS_CLASS, sseg_img) # label 59 for pixels observed but undetected by the detector
+		elif self.detector == 'None':
+			sseg_img = np.ones(depth_img.shape, dtype=np.int32) * self.UNDETECTED_PIXELS_CLASS
 		sem_map_pose = (pose[0], -pose[1], -pose[2]) # x, z, theta
 		print('pose = {}'.format(pose))
 
@@ -63,7 +66,10 @@ class SemanticMap:
 			ax[0].get_xaxis().set_visible(False)
 			ax[0].get_yaxis().set_visible(False)
 			ax[0].set_title("rgb")
-			ax[1].imshow(apply_color_to_map(sseg_img))
+			if self.detector != 'None':
+				ax[1].imshow(apply_color_to_map(sseg_img))
+			else:
+				ax[1].imshow(sseg_img)
 			ax[1].get_xaxis().set_visible(False)
 			ax[1].get_yaxis().set_visible(False)
 			ax[1].set_title("sseg")
@@ -77,7 +83,7 @@ class SemanticMap:
 			#plt.close()
 		#'''
 
-		xyz_points, sseg_points = project_pixels_to_world_coords(sseg_img, depth_img, sem_map_pose, gap=2, FOV=90, cx=320, cy=640, resolution_x=640, resolution_y=1280, theta_x=-0.785, ignored_classes=self.IGNORED_CLASS)
+		xyz_points, sseg_points = project_pixels_to_world_coords(sseg_img, depth_img, sem_map_pose, gap=2, FOV=90, cx=160, cy=320, resolution_x=320, resolution_y=640, theta_x=-0.785, ignored_classes=self.IGNORED_CLASS)
 
 		mask_X = np.logical_and(xyz_points[0, :] > self.min_X, xyz_points[0, :] < self.max_X) 
 		mask_Y = np.logical_and(xyz_points[1, :] > 0.0, xyz_points[1, :] < 100.0)

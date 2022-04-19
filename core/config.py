@@ -5,7 +5,7 @@ _C = CN()
 #=============================== dataset and files =============================
 _C.GENERAL = CN()
 _C.GENERAL.SCENE_HEIGHTS_DICT_PATH = '/home/yimeng/Datasets/habitat-lab/habitat_nav/build_avd_like_scenes/output/scene_height_distribution/scene_heights.npy'
-_C.GENERAL.HABITAT_CONFIG_PATH = "/home/yimeng/Datasets/habitat-lab/configs/tasks/devendra_objectnav_gibson_see_the_floor.yaml" 
+_C.GENERAL.HABITAT_CONFIG_PATH = "configs/devendra_objectnav_gibson_see_the_floor.yaml" 
 _C.GENERAL.HABITAT_EPISODE_DATA_PATH = '/home/yimeng/Datasets/habitat-lab/data/datasets/objectnav/gibson/all.json.gz'
 _C.GENERAL.HABITAT_SCENE_DATA_PATH = '/home/yimeng/Datasets/habitat-lab/data/scene_datasets/'
 _C.GENERAL.RANDOM_SEED = 5
@@ -20,7 +20,7 @@ _C.SAVE.TESTING_RESULTS_FOLDER = 'output/TESTING_RESULTS_Frontier'
 
 #================================== for main_nav.py =====================
 _C.MAIN = CN()
-_C.MAIN.SCENE_LIST = ['Collierville_1', 'Darden_0', 'Markleeville_0', 'Wiconisco_0'] # ['Allensville_0']
+_C.MAIN.SCENE_LIST = ['Collierville_1', 'Darden_0', 'Markleeville_0', 'Wiconisco_0'] # ['Allensville_0', ]
 
 
 #================================== for gen_testing_data.py =====================
@@ -49,7 +49,7 @@ _C.NAVI.NUM_STEPS = 1250
 _C.NAVI.FLAG_GT_SEM_MAP = True
 _C.NAVI.NUM_STEPS_EXPLORE = 30
 
-_C.NAVI.DETECTOR = 'PanopticSeg'
+_C.NAVI.DETECTOR = 'None' #'PanopticSeg'
 _C.NAVI.THRESH_REACH = 0.8
 
 _C.NAVI.USE_ROOM_TYPES = True
