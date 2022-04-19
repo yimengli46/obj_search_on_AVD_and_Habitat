@@ -424,9 +424,9 @@ class localNav_Astar:
 		#print(f'path_idx = {self.path_idx}, path_pose_action = {self.path_pose_action}')
 		return True, subgoal_coords, subgoal_pose
 
-	def plan_to_reach_frontier(self, chosen_frontier, agent_pose, occupancy_map, step, saved_folder):
+	def plan_to_reach_frontier(self, subgoal, agent_pose, occupancy_map, step, saved_folder):
 		agent_coords = pose_to_coords(agent_pose, self.pose_range, self.coords_range)
-		fron_centroid_coords = (int(chosen_frontier.centroid[1]), int(chosen_frontier.centroid[0]))
+		fron_centroid_coords = subgoal
 		#print(f'agent_coords = {agent_coords}')
 
 		#================================ find a reachable subgoal on the map ==============================

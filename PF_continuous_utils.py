@@ -72,7 +72,7 @@ def compute_centers(observed_semantic_map):
 			size = np.max(dist)
 			ins['size'] = size * .1 # in meters, not coordinates
 
-			print(f'ins_center = {ins_center}, cat = {ins_cat}, class = {idx2cat_dict[ins_cat]}, size = {size}')
+			#print(f'ins_center = {ins_center}, cat = {ins_cat}, class = {idx2cat_dict[ins_cat]}, size = {size}')
 			list_instances.append(ins)
 
 	return list_instances
@@ -299,7 +299,7 @@ class ParticleFilter():
 		#plt.show()
 
 		list_instances = compute_centers(semantic_map)
-		print(f'num_instances = {len(list_instances)}')
+		#print(f'num_instances = {len(list_instances)}')
 
 		x_coord_lst = []
 		z_coord_lst = []
@@ -330,7 +330,7 @@ class ParticleFilter():
 				visualize_GMM_dist(weight_k1, inst['size'], inst_pose, self.particles, weights, flag_target=True)
 			else:
 				weight_k1 = get_cooccurred_object_weight(self.k2, k1)
-				print(f'weight_k1 = {weight_k1}, k1 = {k1}, k2 = {self.k2}')
+				#print(f'weight_k1 = {weight_k1}, k1 = {k1}, k2 = {self.k2}')
 				# load GMM
 				if weight_k1 > 0:
 					visualize_GMM_dist(weight_k1, inst['size'], inst_pose, self.particles, weights)
@@ -391,7 +391,7 @@ class ParticleFilter():
 			self.initializeUniformly()
 		else:
 			poses = weights.sample(self.numParticles)
-			print(f'len(poses) = {len(poses)}')
+			#print(f'len(poses) = {len(poses)}')
 			self.particles = poses
 
 	def change_particle_weights_given_room_types(self, particle_weights, gt_semantic_map_room, observed_area_flag):

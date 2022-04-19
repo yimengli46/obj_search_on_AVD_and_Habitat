@@ -16,7 +16,7 @@ _C.SAVE.SEM_MAP_FROM_SCENE_GRAPH_PATH = 'output/gt_semantic_map_from_SceneGraph'
 _C.SAVE.SEM_MAP_PATH = 'output/semantic_map' # built semantic map
 _C.SAVE.OCCUPANCY_MAP_PATH = 'output/semantic_map' # built occupancy map
 _C.SAVE.TESTING_DATA_FOLDER = 'output/TESTING_DATA'
-_C.SAVE.TESTING_RESULTS_FOLDER = 'output/TESTING_RESULTS_USE_ROOM_TYPES'
+_C.SAVE.TESTING_RESULTS_FOLDER = 'output/TESTING_RESULTS_Frontier'
 
 #================================== for main_nav.py =====================
 _C.MAIN = CN()
