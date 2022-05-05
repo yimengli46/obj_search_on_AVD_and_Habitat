@@ -23,6 +23,14 @@ def minus_theta_fn(previous_theta, current_theta):
     result -= 2*math.pi
   return result
 
+def plus_theta_fn (previous_theta, current_theta):
+  result = current_theta + previous_theta
+  if result < -math.pi:
+    result += 2 * math.pi
+  if result > math.pi:
+    result -= 2 * math.pi
+  return result
+
 def project_pixels_to_camera_coords (sseg_img, current_depth, current_pose, gap=2, FOV=90, cx=320, cy=240, resolution_x=640, resolution_y=480, ignored_classes=[]):
   ## camera intrinsic matrix
   FOV = 79
@@ -273,19 +281,19 @@ def pose_to_coords(cur_pose, pose_range, coords_range, cell_size=0.1, flag_cropp
   tx, tz = cur_pose[:2]
     
   if flag_cropped:
-    x_coord = int(floor((tx - pose_range[0]) / cell_size) - coords_range[0])
-    z_coord = int(floor((tz - pose_range[1]) / cell_size) - coords_range[1])
+    x_coord = floor((tx - pose_range[0]) / cell_size - coords_range[0])
+    z_coord = floor((tz - pose_range[1]) / cell_size - coords_range[1])
   else:
-    x_coord = int(floor((tx - pose_range[0]) / cell_size))
-    z_coord = int(floor((tz - pose_range[1]) / cell_size))
+    x_coord = floor((tx - pose_range[0]) / cell_size)
+    z_coord = floor((tz - pose_range[1]) / cell_size)
 
   return (x_coord, z_coord)
 
 def pose_to_coords_numpy(cur_pose, pose_range, coords_range, cell_size=0.1, flag_cropped=True):    
   coords = np.zeros(cur_pose.shape)
   if flag_cropped:
-    coords[:, 0] = (np.floor((cur_pose[:, 0] - pose_range[0]) / cell_size) - coords_range[0]).astype(int)
-    coords[:, 1] = (np.floor((cur_pose[:, 1] - pose_range[1]) / cell_size) - coords_range[1]).astype(int)
+    coords[:, 0] = np.floor((cur_pose[:, 0] - pose_range[0]) / cell_size - coords_range[0])
+    coords[:, 1] = np.floor((cur_pose[:, 1] - pose_range[1]) / cell_size - coords_range[1])
   else:
     coords[:, 0] = np.floor((cur_pose[:, 0] - pose_range[0]) / cell_size)
     coords[:, 1] = np.floor((cur_pose[:, 1] - pose_range[1]) / cell_size)

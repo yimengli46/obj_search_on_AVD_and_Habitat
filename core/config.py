@@ -16,7 +16,7 @@ _C.SAVE.SEM_MAP_FROM_SCENE_GRAPH_PATH = 'output/gt_semantic_map_from_SceneGraph'
 _C.SAVE.SEM_MAP_PATH = 'output/semantic_map' # built semantic map
 _C.SAVE.OCCUPANCY_MAP_PATH = 'output/semantic_map' # built occupancy map
 _C.SAVE.TESTING_DATA_FOLDER = 'output/TESTING_DATA'
-_C.SAVE.TESTING_RESULTS_FOLDER = 'output/TESTING_RESULTS_Frontier'
+_C.SAVE.TESTING_RESULTS_FOLDER = 'output/TESTING_RESULTS_Area_Potential_Greedy_10STEPS'
 
 #================================== for main_nav.py =====================
 _C.MAIN = CN()
@@ -47,12 +47,16 @@ _C.SEM_MAP.GRID_CLASS_SIZE = 100
 _C.NAVI = CN()
 _C.NAVI.NUM_STEPS = 1250
 _C.NAVI.FLAG_GT_SEM_MAP = True
-_C.NAVI.NUM_STEPS_EXPLORE = 30
+_C.NAVI.NUM_STEPS_EXPLORE = 10
 
 _C.NAVI.DETECTOR = 'None' #'PanopticSeg'
 _C.NAVI.THRESH_REACH = 0.8
 
 _C.NAVI.USE_ROOM_TYPES = True
+
+_C.NAVI.PERCEPTION = 'Potential' # possible choices 'Anticipation', 'Potential'
+
+_C.NAVI.STRATEGY = 'Greedy' # 'Greedy' vs 'DP'
 
 #============================ for particle filters ===============================
 _C.PF = CN()
@@ -80,3 +84,4 @@ _C.SEM_MAP.FLAG_VISUALIZE_EGO_OBS = False
 _C.PF.FLAG_VISUALIZE_INS_WEIGHTS = False
 _C.PF.FLAG_VISUALIZE_PEAKS = False
 _C.LN.FLAG_VISUALIZE_LOCAL_MAP = False
+_C.NAVI.FLAG_VISUALIZE_FRONTIER_POTENTIAL = False

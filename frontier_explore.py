@@ -52,7 +52,7 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 	MODE_FIND_SUBGOAL = True
 	explore_steps = 0
 	MODE_FIND_GOAL = False
-	visited_frontier = []
+	visited_frontier = set()
 	chosen_frontier = None
 	SUBGOAL = None
 	GOAL_list = targets
@@ -103,12 +103,18 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 			peak_coords = pose_to_coords(peak_pose, pose_range, coords_range)
 
 			if not observed_area_flag[peak_coords[1], peak_coords[0]]:
-				improved_observed_occupancy_map = fr_utils.remove_isolated_points(observed_occupancy_map)
+				frontiers = fr_utils.get_frontiers(observed_occupancy_map, gt_occupancy_map, observed_area_flag)
+				frontiers = frontiers - visited_frontier
 
-				frontiers1 = fr_utils.get_frontiers(observed_occupancy_map)
-				frontiers2 = fr_utils.get_frontiers(improved_observed_occupancy_map)
+				frontiers = LN.filter_unreachable_frontiers(frontiers, agent_map_pose, observed_occupancy_map)
 
-				chosen_frontier = fr_utils.get_frontier_with_maximum_area(frontiers2, visited_frontier, gt_occupancy_map)
+				if cfg.NAVI.STRATEGY == 'Greedy':
+					chosen_frontier = fr_utils.get_frontier_with_maximum_area(frontiers, gt_occupancy_map)
+				elif cfg.NAVI.STRATEGY == 'DP':
+					top_frontiers = fr_utils.select_top_frontiers(frontiers, top_n=5)
+					chosen_frontier = fr_utils.get_frontier_with_DP(top_frontiers, agent_map_pose, observed_occupancy_map, \
+						cfg.NAVI.NUM_STEPS-step, LN)
+
 				if chosen_frontier is not None:
 					SUBGOAL = (int(chosen_frontier.centroid[1]), int(chosen_frontier.centroid[0]))
 				else:
@@ -116,7 +122,8 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 					return False, step
 			else:
 				chosen_frontier = None
-				SUBGOAL = peak_coords
+				frontiers = None
+				SUBGOAL = LN.find_reachable_loc_to_peak(peak_coords, agent_map_pose, observed_occupancy_map)
 
 			#============================================= visualize semantic map ===========================================#
 			if True:
@@ -159,10 +166,11 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 				ax[0].scatter(vis_target_coords[:, 0], vis_target_coords[:, 1], marker='*', s=50, c='yellow', zorder=5)
 				ax[0].set_title('gt semantic map')
 
-				ax[1].imshow(improved_observed_occupancy_map)
-				for f in frontiers2:
-					ax[1].scatter(f.points[1], f.points[0], c='white', zorder=2)
-					ax[1].scatter(f.centroid[1], f.centroid[0], c='red', zorder=2)
+				ax[1].imshow(observed_occupancy_map)
+				if frontiers is not None:
+					for f in frontiers:
+						ax[1].scatter(f.points[1], f.points[0], c='white', zorder=2)
+						ax[1].scatter(f.centroid[1], f.centroid[0], c='red', zorder=2)
 				if chosen_frontier is not None:
 					ax[1].scatter(chosen_frontier.points[1], chosen_frontier.points[0], c='green', zorder=2)
 					ax[1].scatter(chosen_frontier.centroid[1], chosen_frontier.centroid[0], c='red', zorder=2)
@@ -214,7 +222,7 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 			print(f'reached the subgoal')
 			MODE_FIND_SUBGOAL = True
 			if chosen_frontier is not None:
-				visited_frontier.append(chosen_frontier)
+				visited_frontier.add(chosen_frontier)
 		else:
 			step += 1
 			explore_steps += 1
@@ -223,6 +231,10 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 			# output rot is negative of the input angle
 			agent_rot = habitat_sim.utils.common.quat_from_angle_axis(-next_pose[2], habitat_sim.geo.GRAVITY)
 			obs = env.habitat_env.sim.get_observations_at(agent_pos, agent_rot, keep_agent_at_new_pose=True)
+
+		if explore_steps == cfg.NAVI.NUM_STEPS_EXPLORE:
+			explore_steps = 0
+			MODE_FIND_SUBGOAL = True
 
 	return False, step
 
