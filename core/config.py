@@ -58,6 +58,8 @@ _C.NAVI.PERCEPTION = 'Potential' # possible choices 'Anticipation', 'Potential'
 
 _C.NAVI.STRATEGY = 'Greedy' # 'Greedy' vs 'DP'
 
+_C.NAVI.USE_SEMANTIC_CUE = False # if Flase, use area potential
+
 #============================ for particle filters ===============================
 _C.PF = CN()
 _C.PF.SEMANTIC_PRIOR_PATH = 'output/semantic_prior'

@@ -97,7 +97,7 @@ while step < cfg.NAVI.NUM_STEPS:
 		peak_coords = pose_to_coords(peak_pose, pose_range, coords_range)
 
 		if not observed_area_flag[peak_coords[1], peak_coords[0]]:
-			frontiers = fr_utils.get_frontiers(observed_occupancy_map, gt_occupancy_map, observed_area_flag)
+			frontiers = fr_utils.get_frontiers(observed_occupancy_map, gt_occupancy_map, observed_area_flag, PF)
 			frontiers = frontiers - visited_frontier
 
 			frontiers = LN.filter_unreachable_frontiers(frontiers, agent_map_pose, observed_occupancy_map)

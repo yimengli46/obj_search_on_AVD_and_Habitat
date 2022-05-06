@@ -147,10 +147,14 @@ def get_frontiers(occupancy_grid, gt_occupancy_grid, observed_area_flag):
 
 		for ii in range(nb):
 			component = (labels == (ii+1))
+			#print(f'component.shape = {component.shape}')
 			for f in frontiers:
 				if component[int(f.centroid[0]), int(f.centroid[1])]:
 					f.R = np.sum(component)
 					f.D = round(sqrt(f.R), 2)
+
+					if cfg.NAVI.USE_SEMANTIC_CUE:
+						f.R = PF.compute_particle_in_the_component(component)
 
 					if cfg.NAVI.FLAG_VISUALIZE_FRONTIER_POTENTIAL:
 						fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(12, 5))
