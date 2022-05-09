@@ -114,7 +114,7 @@ def mask_grid_with_frontiers(occupancy_grid, frontiers, do_not_mask=None):
 
 	return masked_grid
 
-def get_frontiers(occupancy_grid, gt_occupancy_grid, observed_area_flag):
+def get_frontiers(occupancy_grid, gt_occupancy_grid, observed_area_flag, PF):
 	filtered_grid = scipy.ndimage.maximum_filter(occupancy_grid == cfg.FE.UNOBSERVED_VAL, size=3)
 	frontier_point_mask = np.logical_and(filtered_grid, occupancy_grid == cfg.FE.FREE_VAL)
 
@@ -140,10 +140,10 @@ def get_frontiers(occupancy_grid, gt_occupancy_grid, observed_area_flag):
 
 	# Compute potential
 	if cfg.NAVI.PERCEPTION == 'Potential':
-		free_but_unobserved_flag = np.logical_and(gt_occupancy_grid == cfg.FE.FREE_VAL, observed_area_flag == False)
-		free_but_unobserved_flag = scipy.ndimage.maximum_filter(free_but_unobserved_flag, size=3)
+		reachable_but_unobserved_flag = np.logical_and(gt_occupancy_grid != cfg.FE.UNREACHABLE_VAL, observed_area_flag == False)
+		reachable_but_unobserved_flag = scipy.ndimage.maximum_filter(reachable_but_unobserved_flag, size=3)
 
-		labels, nb = scipy.ndimage.label(free_but_unobserved_flag)
+		labels, nb = scipy.ndimage.label(reachable_but_unobserved_flag)
 
 		for ii in range(nb):
 			component = (labels == (ii+1))

@@ -160,9 +160,10 @@ while step < cfg.NAVI.NUM_STEPS:
 			ax[0].set_title('gt semantic map')
 
 			ax[1].imshow(observed_occupancy_map)
-			for f in frontiers:
-				ax[1].scatter(f.points[1], f.points[0], c='white', zorder=2)
-				ax[1].scatter(f.centroid[1], f.centroid[0], c='red', zorder=2)
+			if frontiers is not None:
+				for f in frontiers:
+					ax[1].scatter(f.points[1], f.points[0], c='white', zorder=2)
+					ax[1].scatter(f.centroid[1], f.centroid[0], c='red', zorder=2)
 			if chosen_frontier is not None:
 				ax[1].scatter(chosen_frontier.points[1], chosen_frontier.points[0], c='green', zorder=2)
 				ax[1].scatter(chosen_frontier.centroid[1], chosen_frontier.centroid[0], c='red', zorder=2)

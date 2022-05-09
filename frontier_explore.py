@@ -103,7 +103,7 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 			peak_coords = pose_to_coords(peak_pose, pose_range, coords_range)
 
 			if not observed_area_flag[peak_coords[1], peak_coords[0]]:
-				frontiers = fr_utils.get_frontiers(observed_occupancy_map, gt_occupancy_map, observed_area_flag)
+				frontiers = fr_utils.get_frontiers(observed_occupancy_map, gt_occupancy_map, observed_area_flag, PF)
 				frontiers = frontiers - visited_frontier
 
 				frontiers = LN.filter_unreachable_frontiers(frontiers, agent_map_pose, observed_occupancy_map)
@@ -126,7 +126,7 @@ def nav(env, episode_id, scene_name, scene_height, start_pose, targets, target_c
 				SUBGOAL = LN.find_reachable_loc_to_peak(peak_coords, agent_map_pose, observed_occupancy_map)
 
 			#============================================= visualize semantic map ===========================================#
-			if True:
+			if step % cfg.NAVI.NUM_STEPS_VIS == 0:
 				#==================================== visualize the path on the map ==============================
 				built_semantic_map, observed_area_flag, occupancy_map = semMap_module.get_semantic_map()
 

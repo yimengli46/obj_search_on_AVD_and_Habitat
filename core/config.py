@@ -16,7 +16,7 @@ _C.SAVE.SEM_MAP_FROM_SCENE_GRAPH_PATH = 'output/gt_semantic_map_from_SceneGraph'
 _C.SAVE.SEM_MAP_PATH = 'output/semantic_map' # built semantic map
 _C.SAVE.OCCUPANCY_MAP_PATH = 'output/semantic_map' # built occupancy map
 _C.SAVE.TESTING_DATA_FOLDER = 'output/TESTING_DATA'
-_C.SAVE.TESTING_RESULTS_FOLDER = 'output/TESTING_RESULTS_Area_Potential_Greedy_10STEPS'
+_C.SAVE.TESTING_RESULTS_FOLDER = 'output/TESTING_RESULTS_Area_Potential_DP_10STEPS'
 
 #================================== for main_nav.py =====================
 _C.MAIN = CN()
@@ -56,7 +56,7 @@ _C.NAVI.USE_ROOM_TYPES = True
 
 _C.NAVI.PERCEPTION = 'Potential' # possible choices 'Anticipation', 'Potential'
 
-_C.NAVI.STRATEGY = 'Greedy' # 'Greedy' vs 'DP'
+_C.NAVI.STRATEGY = 'DP' # 'Greedy' vs 'DP'
 
 _C.NAVI.USE_SEMANTIC_CUE = False # if Flase, use area potential
 
@@ -79,9 +79,10 @@ _C.FE.FREE_VAL = 3
 _C.FE.UNOBSERVED_VAL = 0
 _C.FE.OBSTACLE_THRESHOLD = 1
 _C.FE.GROUP_INFLATION_RADIUS = 0
+_C.FE.UNREACHABLE_VAL = -1
 
 #================================ for visualization ============================
-_C.NAVI.NUM_STEPS_VIS = 50 # visualize the traj after every X steps
+_C.NAVI.NUM_STEPS_VIS = 100 # visualize the traj after every X steps
 _C.SEM_MAP.FLAG_VISUALIZE_EGO_OBS = False
 _C.PF.FLAG_VISUALIZE_INS_WEIGHTS = False
 _C.PF.FLAG_VISUALIZE_PEAKS = False

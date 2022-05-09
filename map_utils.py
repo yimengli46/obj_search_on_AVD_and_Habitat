@@ -31,7 +31,10 @@ class SemanticMap:
 		#kernel = np.ones((5,5), np.uint8)
 		#self.occupancy_map = cv2.erode(occupancy_map.astype(np.uint8), kernel, iterations=1)
 		print(f'self.occupancy_map.shape = {self.occupancy_map.shape}')
-		
+
+		# load built semantic map
+		self.built_sem_map = np.load(f'{cfg.SAVE.SEM_MAP_PATH}/{self.scene_name}/BEV_semantic_map.npy', allow_pickle=True).item()['semantic_map']
+
 		# ==================================== initialize 4d grid =================================
 		self.min_X = -cfg.SEM_MAP.WORLD_SIZE
 		self.max_X = cfg.SEM_MAP.WORLD_SIZE
@@ -177,6 +180,7 @@ class SemanticMap:
 		occupancy_map = self.occupancy_map.copy()
 		occupancy_map = np.where(self.occupancy_map==1, cfg.FE.FREE_VAL, occupancy_map) # free cell
 		occupancy_map = np.where(self.occupancy_map==0, cfg.FE.COLLISION_VAL, occupancy_map) # occupied cell
+		occupancy_map = np.where(self.built_sem_map == 0, cfg.FE.UNREACHABLE_VAL, occupancy_map)
 
 		# add occupied cells
 		for pose in self.occupied_poses:
